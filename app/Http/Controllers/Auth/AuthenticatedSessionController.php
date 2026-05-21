@@ -21,7 +21,12 @@ class AuthenticatedSessionController extends Controller
      */
     public function create(): Response
     {
-        $enableRegistration = admin_setting('enableRegistration');
+        try {
+            $enableRegistration = admin_setting('enableRegistration');
+        } catch (\Throwable $e) {
+            report($e);
+            $enableRegistration = 'on';
+        }
 
         return Inertia::render('auth/login', [
             'canResetPassword' => Route::has('password.request'),

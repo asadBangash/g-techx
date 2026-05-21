@@ -10,31 +10,32 @@ use App\Classes\Module;
 
 class HandleInertiaRequests extends Middleware
 {
-    /**
-     * The root template that is loaded on the first page visit.
-     *
-     * @var string
-     */
     protected $rootView = 'app';
 
-    /**
-     * Determine the current asset version.
-     */
     public function version(Request $request): string|null
     {
         return parent::version($request);
     }
 
-    /**
-     * Define the props that are shared by default.
-     *
-     * @return array<string, mixed>
-     */
     public function share(Request $request): array
     {
+        $base = parent::share($request);
+
         if (! isAppInstalled()) {
-            return [];
+            return $base;
         }
+
+        try {
+            return array_merge($base, $this->sharedAppData($request));
+        } catch (\Throwable $e) {
+            report($e);
+
+            return array_merge($base, $this->fallbackSharedData($request));
+        }
+    }
+
+    private function sharedAppData(Request $request): array
+    {
         $locale = $request->user()->lang ?? $this->getSuperAdminLang();
 
         if (config('app.is_demo') && Cookie::get('language')) {
@@ -50,8 +51,21 @@ class HandleInertiaRequests extends Middleware
             $defaultLanguages = array_values($languages);
         }
 
+        $packages = [];
+        try {
+            $packages = (new Module())->allModules();
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        $activatedPackages = [];
+        try {
+            $activatedPackages = ActivatedModule();
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         return [
-            ...parent::share($request),
             'auth' => [
                 'user' => $request->user()
                     ? array_merge(
@@ -59,10 +73,10 @@ class HandleInertiaRequests extends Middleware
                         [
                             'permissions' => $this->getUserPermissions($request->user()),
                             'roles' => $this->getUserRoles($request->user()),
-                            'activatedPackages' => ActivatedModule(),
+                            'activatedPackages' => $activatedPackages,
                         ]
                     )
-                    : ['activatedPackages' => ActivatedModule()],
+                    : ['activatedPackages' => $activatedPackages],
                 'impersonating' => $request->session()->has('impersonator_id'),
                 'lang' => $locale,
             ],
@@ -70,16 +84,45 @@ class HandleInertiaRequests extends Middleware
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),
             ],
-            'packages' => (new Module())->allModules(),
-            'adminAllSetting' =>   $request->user() ?  getAdminAllSetting() : getAdminAllSetting(true),
+            'packages' => $packages,
+            'adminAllSetting' => $request->user() ? getAdminAllSetting() : getAdminAllSetting(true),
             'companyAllSetting' => $request->user() ? getCompanyAllSetting($request->user()->id) : [],
-            'imageUrlPrefix' =>  getImageUrlPrefix(),
+            'imageUrlPrefix' => getImageUrlPrefix(),
             'baseUrl' => url('/'),
             'currencies' => config('default_currency.currencies', []),
             'defaultLanguages' => $defaultLanguages,
             'is_demo' => config('app.is_demo', false),
-            'brand' => config('brand'),
-            'brandLogoUrl' => asset(config('brand.logo')),
+            'brand' => config('brand', []),
+            'brandLogoUrl' => asset(config('brand.logo', 'assets/brand/gtechx-logo.png')),
+        ];
+    }
+
+    private function fallbackSharedData(Request $request): array
+    {
+        return [
+            'auth' => [
+                'user' => $request->user(),
+                'impersonating' => $request->session()->has('impersonator_id'),
+                'lang' => 'en',
+                'activatedPackages' => [],
+            ],
+            'flash' => [
+                'success' => $request->session()->get('success'),
+                'error' => $request->session()->get('error'),
+            ],
+            'packages' => [],
+            'adminAllSetting' => [],
+            'companyAllSetting' => [],
+            'imageUrlPrefix' => url('/storage/media/'),
+            'baseUrl' => url('/'),
+            'currencies' => config('default_currency.currencies', []),
+            'defaultLanguages' => [],
+            'is_demo' => config('app.is_demo', false),
+            'brand' => config('brand', [
+                'short_name' => 'G-TechX',
+                'logo' => 'assets/brand/gtechx-logo.png',
+            ]),
+            'brandLogoUrl' => asset('assets/brand/gtechx-logo.png'),
         ];
     }
 
@@ -92,9 +135,6 @@ class HandleInertiaRequests extends Middleware
         return parent::onException($request, $exception);
     }
 
-    /**
-     * Get user permissions (placeholder - implement based on your permission system)
-     */
     private function getUserPermissions($user): array
     {
         if (method_exists($user, 'getAllPermissions')) {
@@ -111,12 +151,12 @@ class HandleInertiaRequests extends Middleware
         return [];
     }
 
-    /**
-     * Get superadmin language if user lang is not set
-     */
     private function getSuperAdminLang(): string
     {
-        return admin_setting('defaultLanguage') ? admin_setting('defaultLanguage') : 'en';
+        try {
+            return admin_setting('defaultLanguage') ?: 'en';
+        } catch (\Throwable $e) {
+            return 'en';
+        }
     }
-
 }

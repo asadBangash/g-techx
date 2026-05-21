@@ -42,13 +42,32 @@ ln -sfn "$(pwd)/storage/app/public" "$(pwd)/public/storage"
 # 7. Permissions
 chmod -R 775 storage bootstrap/cache
 
-# 8. Cache
+# 8. Frontend build (REQUIRED for /login and /dashboard — landing page does not need this)
+npm install
+npm run build
+# Verify:
+ls -la public/build/manifest.json
+
+# If the server has no Node.js: build on your PC, then upload the whole public/build folder via FTP.
+
+# 9. Cache
 php artisan config:clear
 php artisan cache:clear
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 ```
+
+---
+
+## Why landing works but /login shows 500
+
+| Page | Technology | Needs `public/build`? |
+|------|------------|------------------------|
+| `/` landing | Blade HTML | No |
+| `/login`, `/dashboard` | React + Vite (Inertia) | **Yes** |
+
+`public/build` is in `.gitignore`, so `git pull` does **not** deploy frontend assets.
 
 ---
 
