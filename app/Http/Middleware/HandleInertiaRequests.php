@@ -5,7 +5,6 @@ namespace App\Http\Middleware;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Cookie;
 use App\Classes\Module;
 
@@ -33,7 +32,7 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        if (!$this->isInstalled()) {
+        if (! isAppInstalled()) {
             return [];
         }
         $locale = $request->user()->lang ?? $this->getSuperAdminLang();
@@ -120,8 +119,4 @@ class HandleInertiaRequests extends Middleware
         return admin_setting('defaultLanguage') ? admin_setting('defaultLanguage') : 'en';
     }
 
-    private function isInstalled(): bool
-    {
-        return File::exists(storage_path('installed'));
-    }
 }

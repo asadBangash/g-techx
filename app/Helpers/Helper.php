@@ -562,6 +562,45 @@ if (!function_exists('SetConfigEmail')) {
     }
 }
 
+if (! function_exists('isAppInstalled')) {
+    /**
+     * App is installed if storage/installed exists OR database is migrated & seeded.
+     */
+    function isAppInstalled(): bool
+    {
+        if (\Illuminate\Support\Facades\File::exists(storage_path('installed'))) {
+            return true;
+        }
+
+        try {
+            if (empty(config('app.key'))) {
+                return false;
+            }
+
+            if (! \Illuminate\Support\Facades\Schema::hasTable('users')
+                || ! \Illuminate\Support\Facades\Schema::hasTable('settings')) {
+                return false;
+            }
+
+            $ready = User::where('type', 'superadmin')->exists()
+                && Setting::query()->exists();
+
+            if ($ready) {
+                \Illuminate\Support\Facades\File::put(
+                    storage_path('installed'),
+                    'auto ' . date('Y-m-d H:i:s')
+                );
+
+                return true;
+            }
+        } catch (\Throwable $e) {
+            return false;
+        }
+
+        return false;
+    }
+}
+
 if (! function_exists('isLandingPageEnabled')) {
     function isLandingPageEnabled()
     {
