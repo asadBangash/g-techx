@@ -93,7 +93,7 @@ export default function Login({
             <form onSubmit={submit} className="space-y-4">
                 <div className="space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="email" className="text-sm font-medium text-gray-900 dark:text-white">{t('Email address')}</Label>
+                        <Label htmlFor="email" className="text-sm font-medium text-[#a8bcd4]">{t('Email address')}</Label>
                         <Input
                             id="email"
                             type="email"
@@ -105,18 +105,18 @@ export default function Login({
                             tabIndex={1}
                             autoComplete="email"
                             placeholder="email@example.com"
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none transition-colors placeholder-gray-400 dark:bg-slate-700 dark:text-white"
+                            className="w-full border-[#132848] bg-[#04091a] px-3 py-2 text-sm text-white placeholder:text-[#7a90b0] focus-visible:border-[#00c9a7] focus-visible:ring-[#00c9a7]/30"
                         />
                         <InputError message={errors.email} />
                     </div>
 
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                            <Label htmlFor="password" className="text-sm font-medium text-gray-900 dark:text-white">{t('Password')}</Label>
+                            <Label htmlFor="password" className="text-sm font-medium text-[#a8bcd4]">{t('Password')}</Label>
                             {canResetPassword && (
                                 <Link
                                     href={route('password.request')}
-                                    className="text-sm text-primary hover:underline"
+                                    className="text-sm text-[#00c9a7] hover:underline"
                                     tabIndex={5}
                                 >
                                     {t('Forgot password?')}
@@ -133,21 +133,21 @@ export default function Login({
                             tabIndex={2}
                             autoComplete="current-password"
                             placeholder={t('Password')}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none transition-colors placeholder-gray-400 dark:bg-slate-700 dark:text-white"
+                            className="w-full border-[#132848] bg-[#04091a] px-3 py-2 text-sm text-white placeholder:text-[#7a90b0] focus-visible:border-[#00c9a7] focus-visible:ring-[#00c9a7]/30"
                         />
                         <InputError message={errors.password} />
                     </div>
 
-                    <div className="flex items-center space-x-3 mt-4 mb-5">
+                    <div className="mb-5 mt-4 flex items-center space-x-3">
                         <Checkbox
                             id="remember"
                             name="remember"
                             checked={data.remember}
                             onCheckedChange={(checked) => setData('remember', !!checked)}
                             tabIndex={3}
-                            className="w-[14px] h-[14px] border border-gray-300 dark:border-gray-600 rounded"
+                            className="h-[14px] w-[14px] rounded border-[#132848]"
                         />
-                        <Label htmlFor="remember" className="text-sm text-gray-600 dark:text-gray-300">{t('Remember me')}</Label>
+                        <Label htmlFor="remember" className="text-sm text-[#a8bcd4]">{t('Remember me')}</Label>
                     </div>
 
                     {formFields.map((field) => (
@@ -158,7 +158,7 @@ export default function Login({
 
                     <Button
                         type="submit"
-                        className="w-full bg-primary text-white py-2.5 text-sm font-medium tracking-wide transition-all duration-200 rounded-md shadow-md hover:shadow-lg transform hover:scale-[1.02] mt-4"
+                        className="mt-4 w-full rounded-full bg-[#00c9a7] py-2.5 text-sm font-bold tracking-wide text-[#04091a] shadow-[0_4px_20px_rgba(0,201,167,0.3)] transition-all hover:bg-[#009f85] hover:shadow-[0_8px_30px_rgba(0,201,167,0.4)]"
                         tabIndex={4}
                         disabled={processing}
                         data-test="login-button"
@@ -171,19 +171,19 @@ export default function Login({
                             {/* Divider */}
                             <div className="my-5">
                                 <div className="flex items-center">
-                                    <div className="flex-1 h-px bg-gray-200 dark:bg-gray-600"></div>
-                                    <div className="w-2 h-2 rotate-45 mx-4 bg-primary"></div>
-                                    <div className="flex-1 h-px bg-gray-200 dark:bg-gray-600"></div>
+                                    <div className="h-px flex-1 bg-[#132848]"></div>
+                                    <div className="mx-4 h-2 w-2 rotate-45 bg-[#00c9a7]"></div>
+                                    <div className="h-px flex-1 bg-[#132848]"></div>
                                 </div>
                             </div>
                             
                             <div className="space-y-2">
                                 <div className="relative">
                                     <div className="absolute inset-0 flex items-center">
-                                        <span className="w-full border-t dark:border-gray-600" />
+                                        <span className="w-full border-t border-[#132848]" />
                                     </div>
                                     <div className="relative flex justify-center text-xs uppercase">
-                                        <span className="bg-white dark:bg-slate-800 px-2 text-gray-500 dark:text-gray-400">{t('Or continue with')}</span>
+                                        <span className="bg-[#0d1f3c] px-2 text-[#7a90b0]">{t('Or continue with')}</span>
                                     </div>
                                 </div>
                                 {loginButtons.map((button) => (
@@ -198,9 +198,9 @@ export default function Login({
 
                 {enableRegistration && (
                     <div className="text-center mt-5">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <p className="text-sm text-[#7a90b0]">
                             {t("Don't have an account?")}{' '}
-                            <Link href={route('register')} tabIndex={6} className="text-primary font-medium hover:underline">
+                            <Link href={route('register')} tabIndex={6} className="font-medium text-[#00c9a7] hover:underline">
                                 {t('Create one')}
                             </Link>
                         </p>
@@ -219,13 +219,13 @@ export default function Login({
 
                 {isDemo && (
                     <div>
-                        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-300 tracking-wider mb-4 text-center">{t('Quick Access')}</h3>
+                        <h3 className="mb-4 text-center text-sm font-medium tracking-wider text-[#a8bcd4]">{t('Quick Access')}</h3>
                         <div className="grid sm:grid-cols-2 gap-3">
                             <Button
                                 type="button"
                                 onClick={() => handleQuickLogin('superadmin@example.com', '1234')}
                                 disabled={processing}
-                                className="sm:col-span-2 group h-auto relative py-2 px-4 border text-[13px] font-medium text-white transition-all duration-200 rounded-md shadow-sm hover:shadow-md transform hover:scale-[1.02] bg-primary disabled:opacity-50"
+                                className="group relative col-span-2 h-auto rounded-full border border-[#00c9a7]/30 bg-[#00c9a7]/10 px-4 py-2 text-[13px] font-medium text-[#00c9a7] transition-all hover:bg-[#00c9a7]/20 disabled:opacity-50 sm:col-span-2"
                             >
                                 {t('Login as Super Admin')}
                             </Button>
@@ -233,7 +233,7 @@ export default function Login({
                                 type="button"
                                 onClick={() => handleQuickLogin('company@example.com', '1234')}
                                 disabled={processing}
-                                className="group h-auto relative py-2 px-4 border text-[13px] font-medium text-white transition-all duration-200 rounded-md shadow-sm hover:shadow-md transform hover:scale-[1.02] bg-primary disabled:opacity-50"
+                                className="group relative h-auto rounded-full border border-[#00c9a7]/30 bg-[#00c9a7]/10 px-4 py-2 text-[13px] font-medium text-[#00c9a7] transition-all hover:bg-[#00c9a7]/20 disabled:opacity-50"
                             >
                                 {t('Login as Company')}
                             </Button>
@@ -241,7 +241,7 @@ export default function Login({
                                 type="button"
                                 onClick={() => handleQuickLogin('john.smith@company.com', '1234')}
                                 disabled={processing}
-                                className="group h-auto relative py-2 px-4 border text-[13px] font-medium text-white transition-all duration-200 rounded-md shadow-sm hover:shadow-md transform hover:scale-[1.02] bg-primary disabled:opacity-50"
+                                className="group relative h-auto rounded-full border border-[#00c9a7]/30 bg-[#00c9a7]/10 px-4 py-2 text-[13px] font-medium text-[#00c9a7] transition-all hover:bg-[#00c9a7]/20 disabled:opacity-50"
                             >
                                 {t('Login as Employee')}
                             </Button>
@@ -249,7 +249,7 @@ export default function Login({
                                 type="button"
                                 onClick={() => handleQuickLogin('sarah.johnson@client.com', '1234')}
                                 disabled={processing}
-                                className="group h-auto relative py-2 px-4 border text-[13px] font-medium text-white transition-all duration-200 rounded-md shadow-sm hover:shadow-md transform hover:scale-[1.02] bg-primary disabled:opacity-50"
+                                className="group relative h-auto rounded-full border border-[#00c9a7]/30 bg-[#00c9a7]/10 px-4 py-2 text-[13px] font-medium text-[#00c9a7] transition-all hover:bg-[#00c9a7]/20 disabled:opacity-50"
                             >
                                 {t('Login as Customer')}
                             </Button>
@@ -257,7 +257,7 @@ export default function Login({
                                 type="button"
                                 onClick={() => handleQuickLogin('alex.vendor@supplier.com', '1234')}
                                 disabled={processing}
-                                className="group h-auto relative py-2 px-4 border text-[13px] font-medium text-white transition-all duration-200 rounded-md shadow-sm hover:shadow-md transform hover:scale-[1.02] bg-primary disabled:opacity-50"
+                                className="group relative h-auto rounded-full border border-[#00c9a7]/30 bg-[#00c9a7]/10 px-4 py-2 text-[13px] font-medium text-[#00c9a7] transition-all hover:bg-[#00c9a7]/20 disabled:opacity-50"
                             >
                                 {t('Login as Vendor')}
                             </Button>

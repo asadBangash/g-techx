@@ -1,12 +1,10 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { type PropsWithChildren } from 'react';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { useBrand } from '@/contexts/brand-context';
 import { useFavicon } from '@/hooks/use-favicon';
-import { getImagePath } from '@/utils/helpers';
-import ApplicationLogo from '@/components/application-logo';
+import GtechxLogoIcon from '@/components/gtechx-logo-icon';
 import CookieConsent from '@/components/cookie-consent';
-import { usePage } from '@inertiajs/react';
 
 interface AuthLayoutProps {
     name?: string;
@@ -19,113 +17,77 @@ export default function AuthSimpleLayout({
     title,
     description,
 }: PropsWithChildren<AuthLayoutProps>) {
-    const { settings, getPrimaryColor } = useBrand();
-    const { adminAllSetting } = usePage().props as any;
+    const pageProps = usePage().props as Record<string, unknown>;
+    const { settings } = useBrand();
+    const { adminAllSetting, brand } = pageProps as {
+        adminAllSetting?: Record<string, unknown>;
+        brand?: { short_name?: string; tagline?: string; full_name?: string };
+    };
     useFavicon();
-    
-    const logoSrc = settings.themeMode === 'dark' ? (settings.logo_light || settings.logo_dark) : (settings.logo_dark || settings.logo_light);
-    const primaryColor = getPrimaryColor();
-    
-    return (
-        <div className="min-h-screen bg-gray-50 relative overflow-hidden">
-            <style>{`
-                .bg-primary {
-                    background-color: ${primaryColor} !important;
-                    color: white !important;
-                }
-                .bg-primary:hover {
-                    background-color: ${primaryColor}dd !important;
-                }
-                .border-primary {
-                    border-color: ${primaryColor} !important;
-                }
-                .text-primary {
-                    color: ${primaryColor} !important;
-                }
-                .dark .bg-primary {
-                    background-color: ${primaryColor} !important;
-                    color: white !important;
-                }
-                .dark .bg-primary:hover {
-                    background-color: ${primaryColor}dd !important;
-                }
-            `}</style>
 
-            {/* Enhanced Background Design */}
-            <div className="absolute inset-0">
-                {/* Base Gradient */}
-                <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-gray-50 to-stone-100 dark:from-slate-900 dark:via-slate-800 dark:to-stone-900"></div>
-                
-                {/* Elegant Pattern Overlay */}
-                <div 
-                    className="absolute inset-0 opacity-70 dark:opacity-30" 
-                    style={{
-                        backgroundImage: `radial-gradient(circle at 30% 70%, ${primaryColor} 1px, transparent 1px)`,
-                        backgroundSize: '80px 80px'
-                    }}
-                ></div>
-            </div>
-            
-            {/* Language Switcher */}
-            <div className="absolute top-6 right-6 z-10 md:block hidden">
+    const nameParts = (brand?.short_name || 'G-TechX').split('-', 2);
+
+    return (
+        <div className="gtechx-auth min-h-screen bg-[#060e1e] text-[#f0f6ff] relative overflow-hidden">
+            <div
+                className="absolute inset-0 opacity-40"
+                style={{
+                    backgroundImage:
+                        'linear-gradient(rgba(0,201,167,.055) 1px, transparent 1px), linear-gradient(90deg, rgba(0,201,167,.055) 1px, transparent 1px)',
+                    backgroundSize: '60px 60px',
+                }}
+            />
+            <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-[#00c9a7]/10 blur-3xl" />
+            <div className="absolute -bottom-24 -left-24 h-80 w-80 rounded-full bg-[#f0a500]/10 blur-3xl" />
+
+            <div className="absolute top-6 right-6 z-20 hidden md:block">
                 <LanguageSwitcher />
             </div>
 
-            <div className="flex items-center justify-center min-h-screen p-6">
+            <div className="relative z-10 flex min-h-screen flex-col items-center justify-center p-6">
                 <div className="w-full max-w-md">
-                    {/* Logo */}
-                    <div className="text-center mb-8">
-                        <div className="relative lg:inline-block lg:px-6">
-                            <Link href={route('dashboard')} className="inline-block max-w-[180px]">
-                                {logoSrc ? (
-                                    <img
-                                        src={getImagePath(logoSrc)}
-                                        alt={settings.titleText || 'Logo'}
-                                        className="w-auto mx-auto"
-                                    />
-                                ) : (
-                                    <ApplicationLogo className="h-8 w-8 mx-auto text-primary" />
-                                )}
-                            </Link>
-                        </div>
+                    <div className="mb-8 text-center">
+                        <Link href="/" className="inline-flex flex-col items-center gap-3">
+                            <div className="flex items-center gap-3">
+                                <GtechxLogoIcon className="h-12 w-12 shrink-0" />
+                                <div className="text-left leading-none">
+                                    <div className="text-2xl font-bold tracking-tight">
+                                        {nameParts[0]}
+                                        {nameParts[1] ? (
+                                            <>
+                                                -<span className="text-[#00c9a7]">{nameParts[1]}</span>
+                                            </>
+                                        ) : null}
+                                    </div>
+                                    <div className="mt-1 text-[0.58rem] font-bold uppercase tracking-[0.18em] text-[#7a90b0]">
+                                        {brand?.tagline || 'Accounting Solution'}
+                                    </div>
+                                </div>
+                            </div>
+                        </Link>
                     </div>
 
-                    {/* Main Card */}
-                    <div className="relative">
-                        {/* Corner accents */}
-                        <div 
-                            className="absolute -top-3 -left-3 w-6 h-6 border-l-2 border-t-2 rounded-tl-md" 
-                            style={{ borderColor: primaryColor }}
-                        ></div>
-                        <div 
-                            className="absolute -bottom-3 -right-3 w-6 h-6 border-r-2 border-b-2 rounded-br-md" 
-                            style={{ borderColor: primaryColor }}
-                        ></div>
-
-                        <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg lg:p-8 p-4 lg:pt-5 shadow-sm">
-                            {/* Header */}
-                            <div className="text-center mb-4">
-                                <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white mb-1.5">{title}</h1>
-                                <div 
-                                    className="w-12 h-px mx-auto mb-2.5" 
-                                    style={{ backgroundColor: primaryColor }}
-                                ></div>
-                                <p className="text-gray-700 dark:text-gray-300 text-sm">{description}</p>
-                            </div>
-
-                            {/* Content */}
-                            {children}
+                    <div className="rounded-2xl border border-[#00c9a7]/20 bg-[#0d1f3c]/80 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:p-8">
+                        <div className="mb-6 text-center">
+                            <h1 className="text-xl font-bold text-white sm:text-2xl">{title}</h1>
+                            <div className="mx-auto my-3 h-px w-12 bg-gradient-to-r from-[#00c9a7] to-[#f0a500]" />
+                            <p className="text-sm text-[#a8bcd4]">{description}</p>
                         </div>
+                        {children}
                     </div>
 
-                    {/* Footer */}
-                    <div className="text-center mt-6">
-                            <div className="inline-flex items-center space-x-2 bg-white dark:bg-slate-800/80 backdrop-blur-sm rounded-md px-4 py-2 border border-gray-200 dark:border-slate-700">
-                                <p className="text-sm text-gray-500 dark:text-gray-400">{settings.footerText || '© 2026 AccountGo. All rights reserved.'}</p>
-                            </div>
+                    <div className="mt-6 text-center">
+                        <p className="text-xs text-[#7a90b0]">
+                            {settings.footerText ||
+                                `© ${new Date().getFullYear()} Global TechX & Accounting Solution (G-TechX)`}
+                        </p>
+                        <Link href="/" className="mt-2 inline-block text-xs text-[#00c9a7] hover:underline">
+                            ← Back to website
+                        </Link>
                     </div>
                 </div>
             </div>
+
             <CookieConsent settings={adminAllSetting || {}} />
         </div>
     );

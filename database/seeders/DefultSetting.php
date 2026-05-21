@@ -22,17 +22,17 @@ class DefultSetting extends Seeder
 
         $admin_settings = [
             // Brand Settings
-            'logo_light' => 'logo_light.png',
-            'logo_dark' => 'logo_dark.png',
-            'favicon' => 'favicon.png',
-            'titleText' => !empty(env('APP_NAME')) ? env('APP_NAME') : 'ERPGo SaaS',
-            'footerText' => 'Copyright © ' . (!empty(env('APP_NAME')) ? env('APP_NAME') : 'ERPGo SaaS'),
+            'logo_light' => 'assets/brand/gtechx-logo.png',
+            'logo_dark' => 'assets/brand/gtechx-logo.png',
+            'favicon' => 'assets/brand/gtechx-logo.png',
+            'titleText' => config('brand.short_name'),
+            'footerText' => 'Copyright © ' . date('Y') . ' ' . config('brand.copyright'),
             'sidebarVariant' => 'inset',
             'sidebarStyle' => 'plain',
             'layoutDirection' => 'ltr',
-            'themeMode' => 'light',
-            'themeColor' => 'green',
-            'customColor' => '#10b77f',
+            'themeMode' => 'dark',
+            'themeColor' => 'custom',
+            'customColor' => config('brand.primary_color'),
 
             // System Settings
             'defaultLanguage' => 'en',
@@ -56,9 +56,9 @@ class DefultSetting extends Seeder
             'currencySymbolPosition' => 'left',
 
             // SEO Settings
-            'metaKeywords' => 'erpgo, workdo, dashboard, admin, panel, management',
-            'metaTitle' => !empty(env('APP_NAME')) ? env('APP_NAME') . ' - Dashboard' : 'ERPGo SaaS - Dashboard',
-            'metaDescription' => 'Modern dashboard and management system built with Laravel and React',
+            'metaKeywords' => 'g-techx, gtechx, accounting, fbr, pakistan, erp, business management',
+            'metaTitle' => config('brand.short_name') . ' - ' . config('brand.tagline'),
+            'metaDescription' => config('brand.description'),
             'metaImage' => 'meta_image.png',
 
             // Cookie Settings

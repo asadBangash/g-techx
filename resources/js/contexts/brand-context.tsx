@@ -38,18 +38,20 @@ export function BrandProvider({ children }: { children: ReactNode }) {
         globalSettings = adminAllSetting ;
     }
 
+  const { brand } = usePage().props as any;
+
   const settings: BrandSettings = {
     logo_dark: globalSettings?.logo_dark || '',
     logo_light: globalSettings?.logo_light || '',
     favicon: globalSettings?.favicon || '',
-    titleText: globalSettings?.titleText || 'WorkDo',
-    footerText: globalSettings?.footerText || `© ${new Date().getFullYear()} WorkDo. All rights reserved.`,
+    titleText: globalSettings?.titleText || brand?.short_name || 'G-TechX',
+    footerText: globalSettings?.footerText || `© ${new Date().getFullYear()} ${brand?.copyright || 'Global TechX & Accounting Solution (G-TechX)'}`,
     sidebarVariant: globalSettings?.sidebarVariant || 'inset',
     sidebarStyle: globalSettings?.sidebarStyle || 'plain',
     layoutDirection: globalSettings?.layoutDirection || 'ltr',
-    themeMode: globalSettings?.themeMode || 'light',
-    themeColor: globalSettings?.themeColor || 'green',
-    customColor: globalSettings?.customColor || '#10b77f',
+    themeMode: globalSettings?.themeMode || 'dark',
+    themeColor: globalSettings?.themeColor || 'custom',
+    customColor: globalSettings?.customColor || brand?.primary_color || '#00c9a7',
   };
 
   const getPreviewUrl = (path: string) => {

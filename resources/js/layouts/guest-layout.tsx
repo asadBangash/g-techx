@@ -1,4 +1,4 @@
-import ApplicationLogo from "@/components/application-logo";
+import BrandLogo from "@/components/brand-logo";
 import { Link, usePage, Head } from "@inertiajs/react";
 import { PropsWithChildren } from "react";
 import CookieConsent from "@/components/cookie-consent";
@@ -7,7 +7,7 @@ import { useFavicon } from "@/hooks/use-favicon";
 import { useFlashMessages } from "@/hooks/useFlashMessages";
 
 function GuestContent({ children }: PropsWithChildren) {
-    const { companyAllSetting, adminAllSetting } = usePage().props as any;
+    const { companyAllSetting, adminAllSetting, brand } = usePage().props as any;
     useFavicon();
     useFlashMessages();
     
@@ -26,8 +26,11 @@ function GuestContent({ children }: PropsWithChildren) {
         </Head>
         <div className="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-background">
             <div>
-                <Link href="/">
-                    <ApplicationLogo className="w-20 h-20 fill-current text-gray-500" />
+                <Link href="/" className="flex flex-col items-center gap-1">
+                    <BrandLogo className="h-16 w-16 object-contain" />
+                    <span className="text-sm font-semibold text-foreground">
+                        {brand?.short_name || 'G-TechX'}
+                    </span>
                 </Link>
             </div>
 

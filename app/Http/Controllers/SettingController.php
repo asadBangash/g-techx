@@ -128,16 +128,10 @@ class SettingController extends Controller
                 return redirect()->back()->with('success', __('Theme settings saved in demo mode successfully.'));
             }
 
-            if (isset($settings['logo_dark']) ) {
-                $settings['logo_dark'] = basename($settings['logo_dark']);
-            }
-
-            if (isset($settings['logo_light']) ) {
-                $settings['logo_light'] = basename($settings['logo_light']);
-            }
-
-            if (isset($settings['favicon']) ) {
-                $settings['favicon'] = basename($settings['favicon']);
+            foreach (['logo_dark', 'logo_light', 'favicon'] as $logoKey) {
+                if (!empty($settings[$logoKey]) && !str_starts_with($settings[$logoKey], 'assets/')) {
+                    $settings[$logoKey] = basename($settings[$logoKey]);
+                }
             }
 
             foreach ($settings as $key => $value) {

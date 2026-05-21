@@ -1,4 +1,5 @@
 import { usePage } from '@inertiajs/react';
+import { resolveBrandLogoUrl } from '@/utils/brand';
 
 // Add window type declaration
 declare global {
@@ -124,45 +125,18 @@ const formatDateTime = (date: string | Date, pageProps?: any): string => {
  */
 const getImagePath = (path: string, pageProps?: any): string => {
   if (!path || typeof path !== 'string') return '';
-  if (path.startsWith('http')) return path;
 
-  // Handle workdo package paths or storage/media paths - use baseUrl directly
-  if (path.includes('packages/workdo') || path.includes('storage/media')) {
-    let baseUrl;
-    if (pageProps?.baseUrl) {
-      baseUrl = pageProps.baseUrl;
-    } else {
-      const { props } = usePage();
-      baseUrl = (props as any).baseUrl || window.location.origin;
+  let props = pageProps;
+  if (!props) {
+    try {
+      const { props: pageContextProps } = usePage();
+      props = pageContextProps;
+    } catch {
+      props = {};
     }
-    const cleanPath = path.startsWith('/') ? path : '/' + path;
-    return `${baseUrl}${cleanPath}`;
   }
 
-  try {
-    let imageUrlPrefix;
-    if (pageProps?.imageUrlPrefix) {
-      imageUrlPrefix = pageProps.imageUrlPrefix;
-    } else {
-      const { props } = usePage();
-      imageUrlPrefix = (props as any).imageUrlPrefix || '';
-    }
-
-    if (!imageUrlPrefix) return '';
-
-    const prefixEndsWithSlash = imageUrlPrefix.endsWith('/');
-    const pathStartsWithSlash = path.startsWith('/');
-
-    if (prefixEndsWithSlash && pathStartsWithSlash) {
-      return imageUrlPrefix + path.substring(1);
-    } else if (!prefixEndsWithSlash && !pathStartsWithSlash) {
-      return imageUrlPrefix + '/' + path;
-    } else {
-      return imageUrlPrefix + path;
-    }
-  } catch {
-    return '';
-  }
+  return resolveBrandLogoUrl(path, props as Record<string, unknown>);
 };
 
 /**

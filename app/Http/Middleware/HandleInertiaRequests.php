@@ -79,6 +79,8 @@ class HandleInertiaRequests extends Middleware
             'currencies' => config('default_currency.currencies', []),
             'defaultLanguages' => $defaultLanguages,
             'is_demo' => config('app.is_demo', false),
+            'brand' => config('brand'),
+            'brandLogoUrl' => asset(config('brand.logo')),
         ];
     }
 

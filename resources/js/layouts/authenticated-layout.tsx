@@ -58,7 +58,7 @@ function AuthenticatedLayoutContent({
             )}
         </Head>
         <div
-            className={settings.layoutDirection === 'rtl' ? 'rtl' : 'ltr'}
+            className={`gtechx-dashboard min-h-screen bg-[#0a1224] ${settings.layoutDirection === 'rtl' ? 'rtl' : 'ltr'}`}
             data-theme={settings.themeMode}
             dir={settings.layoutDirection === 'rtl' ? 'rtl' : 'ltr'}
             style={{ direction: settings.layoutDirection === 'rtl' ? 'rtl' : 'ltr' }}
@@ -66,12 +66,13 @@ function AuthenticatedLayoutContent({
         <SidebarProvider defaultOpen={true}>
             <AppSidebar />
 
-            <SidebarInset className="overflow-visible"
+            <SidebarInset
+                className="overflow-visible bg-[#0a1224] text-[#f0f6ff]"
                 style={{ direction: settings.layoutDirection === 'rtl' ? 'rtl' : 'ltr' }}
                 dir={settings.layoutDirection === 'rtl' ? 'rtl' : 'ltr'}
             >
                 <header
-                    className={`bg-background flex h-12 shrink-0 items-center gap-2 px-4 py-1 border-b mb-2 justify-between`}
+                    className="mb-2 flex h-12 shrink-0 items-center justify-between gap-2 border-b border-[#132848] bg-[#060e1e]/90 px-4 py-1 backdrop-blur"
                     >
                     {/* Sidebar + Breadcrumb */}
                     <div className={`flex items-center gap-2 ${ settings.layoutDirection === "rtl" ? "order-2 flex-row-reverse" : "order-1" }`} >

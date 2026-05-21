@@ -269,3 +269,50 @@
         cursor: not-allowed !important;
     }
 }
+
+/* G-TechX dashboard theme */
+.gtechx-dashboard {
+    --background: 222 47% 7%;
+    --foreground: 210 40% 96%;
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 96%;
+    --primary: 168 100% 39%;
+    --primary-foreground: 222 47% 7%;
+    --muted: 222 30% 18%;
+    --muted-foreground: 215 20% 65%;
+    --border: 222 30% 20%;
+    --sidebar-background: 222 47% 7%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-border: 222 30% 20%;
+    --sidebar-accent: 222 30% 14%;
+    --sidebar-accent-foreground: 210 40% 96%;
+}
+
+.gtechx-dashboard .bg-background,
+.gtechx-dashboard .bg-card,
+.gtechx-dashboard [data-sidebar="sidebar"] {
+    background-color: #060e1e !important;
+}
+
+.gtechx-dashboard .text-foreground,
+.gtechx-dashboard main,
+.gtechx-dashboard header {
+    color: #f0f6ff;
+}
+
+.gtechx-dashboard .border,
+.gtechx-dashboard .border-b,
+.gtechx-dashboard .border-border {
+    border-color: #132848 !important;
+}
+
+.gtechx-auth .bg-primary,
+.gtechx-dashboard .bg-primary {
+    background-color: #00c9a7 !important;
+    color: #04091a !important;
+}
+
+.gtechx-auth .text-primary,
+.gtechx-dashboard .text-primary {
+    color: #00c9a7 !important;
+}

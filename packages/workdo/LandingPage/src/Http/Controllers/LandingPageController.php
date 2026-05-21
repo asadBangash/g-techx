@@ -32,18 +32,8 @@ class LandingPageController extends Controller
             ]);
         }
 
-        $enableRegistration = admin_setting('enableRegistration');
-
-        $settingsData = $settings ? $settings->toArray() : [];
-        $settingsData['enable_registration'] = $enableRegistration === 'on';
-        $settingsData['is_authenticated'] = $request->user() !== null;
-
-        return Inertia::render('LandingPage/Landing', [
-            'auth' => [
-                'user' => $request->user(),
-                'lang' => app()->getLocale()
-            ],
-            'settings' => $settingsData
+        return response()->view('landing.index', [
+            'brand' => config('brand'),
         ]);
     }
 
