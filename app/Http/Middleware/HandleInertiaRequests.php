@@ -124,6 +124,7 @@ class HandleInertiaRequests extends Middleware
                 'logo' => 'assets/brand/gtechx-logo.png',
             ]),
             'brandLogoUrl' => asset('assets/brand/gtechx-logo.png'),
+            'csrf_token' => csrf_token(),
         ];
     }
 

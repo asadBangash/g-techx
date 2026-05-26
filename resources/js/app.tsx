@@ -11,33 +11,52 @@ import { Toaster } from "sonner";
 import { Suspense } from "react";
 import axios from "axios";
 
+const syncCsrfToken = (token?: string | null) => {
+    if (!token) {
+        return;
+    }
 
-// Silent CSRF token refresh
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    if (meta) {
+        meta.setAttribute('content', token);
+    }
+
+    axios.defaults.headers.common['X-CSRF-TOKEN'] = token;
+};
+
+// Keep CSRF meta tag in sync on every Inertia navigation
+router.on('success', (event) => {
+    const token = (event.detail.page.props as { csrf_token?: string })?.csrf_token;
+    syncCsrfToken(token);
+});
+
+// Reload on expired CSRF token (419) so the user gets a fresh session
+router.on('invalid', (event) => {
+    if (event.detail.response?.status === 419) {
+        event.preventDefault();
+        window.location.reload();
+    }
+});
+
+// Silent CSRF token refresh fallback
 const refreshToken = async () => {
     try {
-        const response = await fetch(window.location.href, { method: 'GET' });
+        const response = await fetch(window.location.href, {
+            method: 'GET',
+            credentials: 'same-origin',
+        });
         const html = await response.text();
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
         const newToken = doc.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-        if (newToken) {
-            document.querySelector('meta[name="csrf-token"]')?.setAttribute('content', newToken);
-            axios.defaults.headers.common['X-CSRF-TOKEN'] = newToken;
-        }
+        syncCsrfToken(newToken);
     } catch (e) {}
 };
 
-router.on('before', (event) => {
+router.on('before', () => {
     const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     if (!token) {
         refreshToken();
-    }
-});
-
-router.on('error', async (event) => {
-    const errors = event.detail.errors;
-    if (errors && (errors[419] || errors['419'] || Object.values(errors).some(e => String(e).includes('419')))) {
-        await refreshToken();
     }
 });
 

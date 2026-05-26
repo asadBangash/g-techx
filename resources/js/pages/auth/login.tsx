@@ -1,4 +1,4 @@
-import { FormEventHandler, useEffect } from "react";
+import { FormEventHandler, useEffect, useState } from "react";
 import AuthLayout from "@/layouts/auth-layout";
 import { Head, Link, useForm, router } from "@inertiajs/react";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,7 @@ export default function Login({
     isDemo?: boolean;
 }) {
     const { t } = useTranslation();
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const { data, setData, post, processing, errors, reset } = useForm({
         email: prefillEmail || "",
         password: "",
@@ -33,7 +34,8 @@ export default function Login({
     });
 
     const formFields = useFormFields('getReCaptchFields', data, setData, errors, 'create', t);
-    const loginButtons = usePageButtons('getLoginButtons', { t, isLoading: processing });
+    const showLoading = processing || isSubmitting;
+    const loginButtons = usePageButtons('getLoginButtons', { t, isLoading: showLoading });
 
     useEffect(() => {
         if (prefillEmail) {
@@ -59,29 +61,39 @@ export default function Login({
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
+
+        if (processing || isSubmitting) {
+            return;
+        }
+
+        setIsSubmitting(true);
+
         post(route("login"), {
             onError: () => {
+                setIsSubmitting(false);
                 if ((window as any).refreshRecaptchaV3) {
                     (window as any).refreshRecaptchaV3();
                 }
             },
+            onFinish: () => setIsSubmitting(false),
         });
     };
 
     const handleQuickLogin = (email: string, password: string) => {
-        setData((prevData) => ({
-            ...prevData,
-            email: email,
-            password: password,
-        }));
-        
-        // Use router directly to ensure we post with the updated values immediately
-        // while also showing the values in the input fields for a brief moment.
+        if (processing || isSubmitting) {
+            return;
+        }
+
+        setIsSubmitting(true);
+
         router.post(route('login'), {
             email,
             password,
             remember: data.remember,
             recaptcha_token: data.recaptcha_token || '',
+        }, {
+            onError: () => setIsSubmitting(false),
+            onFinish: () => setIsSubmitting(false),
         });
     };
 
@@ -168,10 +180,10 @@ export default function Login({
                         type="submit"
                         className="mt-4 w-full rounded-full bg-[#00c9a7] py-2.5 text-sm font-bold tracking-wide text-[#04091a] shadow-[0_4px_20px_rgba(0,201,167,0.3)] transition-all hover:bg-[#009f85] hover:shadow-[0_8px_30px_rgba(0,201,167,0.4)]"
                         tabIndex={4}
-                        disabled={processing}
+                        disabled={showLoading}
                         data-test="login-button"
                     >
-                        {processing ? 'Loading...' : t('SIGN IN')}
+                        {showLoading ? t('Signing in...') : t('SIGN IN')}
                     </Button>
 
                     {loginButtons.length > 0 && (
@@ -232,7 +244,7 @@ export default function Login({
                             <Button
                                 type="button"
                                 onClick={() => handleQuickLogin('superadmin@example.com', '1234')}
-                                disabled={processing}
+                                disabled={showLoading}
                                 className="group relative col-span-2 h-auto rounded-full border border-[#00c9a7]/30 bg-[#00c9a7]/10 px-4 py-2 text-[13px] font-medium text-[#00c9a7] transition-all hover:bg-[#00c9a7]/20 disabled:opacity-50 sm:col-span-2"
                             >
                                 {t('Login as Super Admin')}
@@ -240,7 +252,7 @@ export default function Login({
                             <Button
                                 type="button"
                                 onClick={() => handleQuickLogin('company@example.com', '1234')}
-                                disabled={processing}
+                                disabled={showLoading}
                                 className="group relative h-auto rounded-full border border-[#00c9a7]/30 bg-[#00c9a7]/10 px-4 py-2 text-[13px] font-medium text-[#00c9a7] transition-all hover:bg-[#00c9a7]/20 disabled:opacity-50"
                             >
                                 {t('Login as Company')}
@@ -248,7 +260,7 @@ export default function Login({
                             <Button
                                 type="button"
                                 onClick={() => handleQuickLogin('john.smith@company.com', '1234')}
-                                disabled={processing}
+                                disabled={showLoading}
                                 className="group relative h-auto rounded-full border border-[#00c9a7]/30 bg-[#00c9a7]/10 px-4 py-2 text-[13px] font-medium text-[#00c9a7] transition-all hover:bg-[#00c9a7]/20 disabled:opacity-50"
                             >
                                 {t('Login as Employee')}
@@ -256,7 +268,7 @@ export default function Login({
                             <Button
                                 type="button"
                                 onClick={() => handleQuickLogin('sarah.johnson@client.com', '1234')}
-                                disabled={processing}
+                                disabled={showLoading}
                                 className="group relative h-auto rounded-full border border-[#00c9a7]/30 bg-[#00c9a7]/10 px-4 py-2 text-[13px] font-medium text-[#00c9a7] transition-all hover:bg-[#00c9a7]/20 disabled:opacity-50"
                             >
                                 {t('Login as Customer')}
@@ -264,7 +276,7 @@ export default function Login({
                             <Button
                                 type="button"
                                 onClick={() => handleQuickLogin('alex.vendor@supplier.com', '1234')}
-                                disabled={processing}
+                                disabled={showLoading}
                                 className="group relative h-auto rounded-full border border-[#00c9a7]/30 bg-[#00c9a7]/10 px-4 py-2 text-[13px] font-medium text-[#00c9a7] transition-all hover:bg-[#00c9a7]/20 disabled:opacity-50"
                             >
                                 {t('Login as Vendor')}

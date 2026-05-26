@@ -36,7 +36,7 @@ class RegisteredUserController extends Controller
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse|SymfonyResponse
     {
         $enableRegistration = admin_setting('enableRegistration');
 
@@ -115,14 +115,14 @@ class RegisteredUserController extends Controller
                 SetConfigEmail($adminUser->id);
                 $user->sendEmailVerificationNotification();
 
-                return redirect()
-                    ->route('login', ['email' => $user->email])
-                    ->with('success', __('Account created! Please verify your email, then log in.'));
+                session()->flash('success', __('Account created! Please verify your email, then log in.'));
+
+                return Inertia::location(route('login', ['email' => $user->email]));
             }
 
-            return redirect()
-                ->route('login', ['email' => $user->email])
-                ->with('success', __('Account created successfully! Please log in to access your dashboard and features.'));
+            session()->flash('success', __('Account created successfully! Please log in to access your dashboard and features.'));
+
+            return Inertia::location(route('login', ['email' => $user->email]));
 
         } catch (\Exception $e) {
             report($e);
