@@ -15,16 +15,18 @@ export default function Login({
     status,
     canResetPassword,
     enableRegistration,
+    prefillEmail = '',
     isDemo = false,
 }: {
     status?: string;
     canResetPassword: boolean;
     enableRegistration?: boolean;
+    prefillEmail?: string;
     isDemo?: boolean;
 }) {
     const { t } = useTranslation();
     const { data, setData, post, processing, errors, reset } = useForm({
-        email: "",
+        email: prefillEmail || "",
         password: "",
         remember: false,
         recaptcha_token: null,
@@ -32,6 +34,12 @@ export default function Login({
 
     const formFields = useFormFields('getReCaptchFields', data, setData, errors, 'create', t);
     const loginButtons = usePageButtons('getLoginButtons', { t, isLoading: processing });
+
+    useEffect(() => {
+        if (prefillEmail) {
+            setData('email', prefillEmail);
+        }
+    }, [prefillEmail]);
 
     useEffect(() => {
         if (isDemo) {

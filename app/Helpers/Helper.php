@@ -6,6 +6,7 @@ use App\Classes\Module;
 use App\Events\DefaultData;
 use App\Events\GivePermissionToRole;
 use App\Models\Setting;
+use App\Models\Plan;
 use App\Models\User;
 use App\Models\UserActiveModule;
 use App\Models\UserCoupon;
@@ -212,11 +213,41 @@ if (!function_exists('getImageUrlPrefix')) {
     }
 }
 
+// Seed module permissions onto the global company role (required for sidebar menus).
+if (! function_exists('seedPackagePermissions')) {
+    function seedPackagePermissions(array $moduleNames): void
+    {
+        foreach ($moduleNames as $moduleName) {
+            $moduleName = trim((string) $moduleName);
+            if ($moduleName === '') {
+                continue;
+            }
+
+            $seederClass = "Workdo\\{$moduleName}\\Database\\Seeders\\PermissionTableSeeder";
+            if (! class_exists($seederClass)) {
+                continue;
+            }
+
+            try {
+                (new $seederClass())->run();
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
+        try {
+            app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+}
+
 // Users Activated Module
 if (!function_exists('ActivatedModule')) {
     function ActivatedModule($user_id = null)
     {
-        $activated_module = user::$superadmin_activated_module;
+        $alwaysActive = User::$superadmin_activated_module;
         $user_active_module = [];
 
         if ($user_id != null) {
@@ -227,27 +258,24 @@ if (!function_exists('ActivatedModule')) {
             $user = null;
         }
 
-        if (!empty($user)) {
-            $available_modules = array_values((new Module())->allEnabled());
-
+        if (! empty($user)) {
             if ($user->type == 'superadmin') {
-                $user_active_module = $available_modules;
+                $user_active_module = array_values((new Module())->allEnabled());
             } else {
-                $active_module = [];
-                if ($user->type != 'company') {
-                    $user = User::find($user->created_by);
-                }
+                $companyUser = $user->type === 'company'
+                    ? $user
+                    : User::find($user->created_by);
 
-                if ($user) {
-                    $active_module = UserActiveModule::where('user_id', $user->id)->pluck('module')->toArray();
-                    $user_active_module = array_values(array_intersect($available_modules, $active_module));
-                    $user_active_module = array_values(array_unique(array_merge($activated_module,$user_active_module)));
+                if ($companyUser) {
+                    // Include plan modules + user_active_modules (same source as the plans page).
+                    $user_active_module = Plan::getUserSubscriptionModules($companyUser->id);
+                    $user_active_module = array_values(array_unique(array_merge($alwaysActive, $user_active_module)));
                 }
             }
         } else {
-            $active_module = array_values((new Module())->allEnabledAdmin());
-            $user_active_module = $active_module;
+            $user_active_module = array_values((new Module())->allEnabledAdmin());
         }
+
         return $user_active_module;
     }
 }
@@ -285,7 +313,122 @@ if (!function_exists('Module_is_active')) {
     }
 }
 
+// Dispatch module setup events (default data + role permissions).
+if (! function_exists('dispatchPlanModuleSetup')) {
+    function dispatchPlanModuleSetup(User $user, array $modules_array, bool $seedPermissions = false): void
+    {
+        if (empty($modules_array)) {
+            return;
+        }
+
+        if ($seedPermissions) {
+            seedPackagePermissions($modules_array);
+        }
+
+        $modules_string = implode(',', $modules_array);
+        DefaultData::dispatch($user->id, $modules_string);
+
+        $company_role = Role::where('name', 'company')->where('guard_name', 'web')->first();
+        $client_role = Role::where('name', 'client')->where('created_by', $user->id)->first();
+        $staff_role = Role::where('name', 'staff')->where('created_by', $user->id)->first();
+
+        if (! empty($company_role)) {
+            GivePermissionToRole::dispatch($company_role->id, 'company', $modules_string);
+        }
+        if (! empty($client_role)) {
+            GivePermissionToRole::dispatch($client_role->id, 'client', $modules_string);
+        }
+        if (! empty($staff_role)) {
+            GivePermissionToRole::dispatch($staff_role->id, 'staff', $modules_string);
+        }
+    }
+}
+
+// Log out and send the user back to login (used after subscription changes).
+if (! function_exists('logoutAndRedirectToLogin')) {
+    function logoutAndRedirectToLogin(string $message, ?string $email = null): \Illuminate\Http\RedirectResponse|\Symfony\Component\HttpFoundation\Response
+    {
+        Auth::guard('web')->logout();
+        request()->session()->invalidate();
+        request()->session()->regenerate(true);
+        request()->session()->regenerateToken();
+
+        session()->flash('success', $message);
+
+        $url = route('login', $email ? ['email' => $email] : []);
+
+        if (request()->header('X-Inertia')) {
+            return \Inertia\Inertia::location($url);
+        }
+
+        return redirect($url);
+    }
+}
+
 // for plan assign
+if (! function_exists('applyPlanModulesToUser')) {
+    function applyPlanModulesToUser(User $user, array $modules_array, bool $withSetup = true, bool $seedPermissions = false): void
+    {
+        if (empty($modules_array)) {
+            return;
+        }
+
+        UserActiveModule::where('user_id', $user->id)->delete();
+
+        foreach ($modules_array as $moduleName) {
+            $moduleName = trim((string) $moduleName);
+            if ($moduleName === '') {
+                continue;
+            }
+
+            UserActiveModule::create([
+                'user_id' => $user->id,
+                'module' => $moduleName,
+            ]);
+        }
+
+        if ($withSetup) {
+            dispatchPlanModuleSetup($user, $modules_array, $seedPermissions);
+        }
+    }
+}
+
+if (! function_exists('syncUserPlanModules')) {
+    function syncUserPlanModules($user_id, $plan_id = null, $modules = null): array
+    {
+        $user = User::find($user_id);
+        if (! $user) {
+            return ['is_success' => false, 'error' => 'User not found.'];
+        }
+
+        $plan = $plan_id ? Plan::find($plan_id) : Plan::find($user->active_plan);
+        if (! $plan) {
+            return ['is_success' => false, 'error' => 'Plan not found.'];
+        }
+
+        if (is_array($modules)) {
+            $modules_array = $modules;
+        } elseif (! empty($modules)) {
+            $modules_array = array_filter(array_map('trim', explode(',', $modules)));
+        } else {
+            $modules_array = is_array($plan->modules) ? $plan->modules : [];
+        }
+
+        if (empty($modules_array)) {
+            return ['is_success' => false, 'error' => 'No modules found for this plan.'];
+        }
+
+        applyPlanModulesToUser($user, $modules_array, true, true);
+
+        if (! $user->active_plan) {
+            $user->active_plan = $plan->id;
+            $user->save();
+        }
+
+        return ['is_success' => true];
+    }
+}
+
 if (!function_exists('assignPlan')) {
     function assignPlan($plan_id = null, $duration = null, $modules = null, $counter = null, $user_id = null)
     {
@@ -333,29 +476,7 @@ if (!function_exists('assignPlan')) {
             }
 
             if (! empty($modules_array)) {
-                UserActiveModule::where('user_id', $user->id)->delete();
-
-                foreach ($modules_array as $moduleName) {
-                    $moduleName = trim((string) $moduleName);
-                    if ($moduleName !== '') {
-                        UserActiveModule::create([
-                            'user_id' => $user->id,
-                            'module' => $moduleName,
-                        ]);
-                    }
-                }
-
-                $modules_string = implode(',', $modules_array);
-                DefaultData::dispatch($user->id, $modules_string);
-                $client_role = Role::where('name', 'client')->where('created_by', $user->id)->first();
-                $staff_role = Role::where('name', 'staff')->where('created_by', $user->id)->first();
-
-                if (! empty($client_role)) {
-                    GivePermissionToRole::dispatch($client_role->id, 'client', $modules_string);
-                }
-                if (! empty($staff_role)) {
-                    GivePermissionToRole::dispatch($staff_role->id, 'staff', $modules_string);
-                }
+                applyPlanModulesToUser($user, $modules_array);
             }
             
             // Set user limits from plan (don't modify the plan itself)

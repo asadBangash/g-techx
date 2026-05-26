@@ -4,12 +4,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthLayout from '@/layouts/auth-layout';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { FormEventHandler, useEffect } from 'react';
+import { FormEventHandler, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 export default function Register() {
     const { t } = useTranslation();
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         name: '',
         email: '',
         password: '',
@@ -24,8 +25,22 @@ export default function Register() {
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
-        post(route('register'));
+
+        if (processing || isSubmitting) {
+            return;
+        }
+
+        setIsSubmitting(true);
+        clearErrors();
+
+        post(route('register'), {
+            preserveScroll: true,
+            onError: () => setIsSubmitting(false),
+            onFinish: () => setIsSubmitting(false),
+        });
     };
+
+    const showLoading = processing || isSubmitting;
 
     return (
         <AuthLayout
@@ -34,6 +49,12 @@ export default function Register() {
         >
             <Head title={t('Register')} />
             <form onSubmit={submit} className="space-y-4">
+                {errors.email && typeof errors.email === 'string' && errors.email.includes('failed') && (
+                    <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300">
+                        {errors.email}
+                    </div>
+                )}
+
                 <div className="space-y-4">
                     <div className="space-y-2">
                         <Label htmlFor="name" className="text-sm font-medium text-gray-900 dark:text-white">{t('Name')}</Label>
@@ -48,12 +69,10 @@ export default function Register() {
                             tabIndex={1}
                             autoComplete="name"
                             placeholder={t('Full name')}
+                            disabled={showLoading}
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none transition-colors placeholder-gray-400 dark:bg-slate-700 dark:text-white"
                         />
-                        <InputError
-                            message={errors.name}
-                            className="mt-2"
-                        />
+                        <InputError message={errors.name} className="mt-2" />
                     </div>
 
                     <div className="space-y-2">
@@ -68,6 +87,7 @@ export default function Register() {
                             tabIndex={2}
                             autoComplete="email"
                             placeholder="email@example.com"
+                            disabled={showLoading}
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none transition-colors placeholder-gray-400 dark:bg-slate-700 dark:text-white"
                         />
                         <InputError message={errors.email} />
@@ -85,6 +105,7 @@ export default function Register() {
                             tabIndex={3}
                             autoComplete="new-password"
                             placeholder={t('Password')}
+                            disabled={showLoading}
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none transition-colors placeholder-gray-400 dark:bg-slate-700 dark:text-white"
                         />
                         <InputError message={errors.password} />
@@ -104,21 +125,20 @@ export default function Register() {
                             tabIndex={4}
                             autoComplete="new-password"
                             placeholder={t('Confirm password')}
+                            disabled={showLoading}
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none transition-colors placeholder-gray-400 dark:bg-slate-700 dark:text-white"
                         />
-                        <InputError
-                            message={errors.password_confirmation}
-                        />
+                        <InputError message={errors.password_confirmation} />
                     </div>
 
                     <Button
                         type="submit"
                         className="w-full bg-primary text-white py-2.5 text-sm font-medium tracking-wide transition-all duration-200 rounded-md shadow-md hover:shadow-lg transform hover:scale-[1.02] mt-6"
                         tabIndex={5}
-                        disabled={processing}
+                        disabled={showLoading}
                         data-test="register-user-button"
                     >
-                        {processing ? 'Loading...' : t('CREATE ACCOUNT')}
+                        {showLoading ? t('Creating account...') : t('CREATE ACCOUNT')}
                     </Button>
                 </div>
 

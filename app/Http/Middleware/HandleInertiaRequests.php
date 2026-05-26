@@ -94,6 +94,7 @@ class HandleInertiaRequests extends Middleware
             'is_demo' => config('app.is_demo', false),
             'brand' => config('brand', []),
             'brandLogoUrl' => asset(config('brand.logo', 'assets/brand/gtechx-logo.png')),
+            'csrf_token' => csrf_token(),
         ];
     }
 

@@ -404,8 +404,11 @@ class PlanController extends Controller
             if ($result['is_success']) {
                 $user->is_trial_done = 1;
                 $user->save();
-                
-                return back()->with('success', __('Your trial has been started.'));
+
+                return logoutAndRedirectToLogin(
+                    __('Trial started successfully! Please log in again to see all your features.'),
+                    $user->email
+                );
             } else {
                 return back()->with('error', $result['error'] ?? __('Failed to start trial.'));
             }
@@ -423,12 +426,6 @@ class PlanController extends Controller
         }
 
         $duration = $request->duration;
-        $durationStr = (string)$duration;
-        \Illuminate\Support\Facades\Log::error('ASSIGIPLAN LOG [DEBUG]: called', [
-            'user_id' => $user->id,
-            'plan_id' => $plan->id,
-            'duration' => $durationStr
-        ]);
         $counter = [
             'user_counter' => $plan->number_of_users ?? '0',
             'storage_limit' => $plan->storage_limit ?? '0',
@@ -454,7 +451,11 @@ class PlanController extends Controller
             $order->receipt = null;
             $order->created_by = $user->id;
             $order->save();
-            return back()->with('success', __('Free plan has been assigned successfully.'));
+
+            return logoutAndRedirectToLogin(
+                __('Subscription activated successfully! Please log in again to see all your features.'),
+                $user->email
+            );
         } else {
             return back()->with('error', $result['error'] ?? 'Failed to assign free plan.');
         }

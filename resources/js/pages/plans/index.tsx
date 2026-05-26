@@ -105,11 +105,7 @@ export default function PlansIndex({ plans, canCreate, activeModules, bankTransf
 
     const handleStartTrial = (plan: Plan) => {
         router.post(route('plans.start-trial', plan.id), {}, {
-            preserveState: true,
-            onSuccess: () => {
-                // Reload the page to update sidebar modules and user trial info
-                router.reload();
-            }
+            preserveState: false,
         });
     };
 
@@ -117,7 +113,7 @@ export default function PlansIndex({ plans, canCreate, activeModules, bankTransf
         router.post(route('plans.assign-free', plan.id), {
             duration: pricingPeriod === 'monthly' ? 'Month' : 'Year'
         }, {
-            preserveState: true
+            preserveState: false,
         });
     };
 

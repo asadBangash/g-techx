@@ -31,6 +31,7 @@ class AuthenticatedSessionController extends Controller
         return Inertia::render('auth/login', [
             'canResetPassword' => Route::has('password.request'),
             'status' => session('status'),
+            'prefillEmail' => request()->query('email', ''),
             'enableRegistration' => $enableRegistration === 'on',
             'isDemo' => config('app.is_demo', false),
         ]);

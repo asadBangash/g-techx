@@ -9,15 +9,17 @@ use Illuminate\Console\Command;
 
 class AssignCompanyPlansCommand extends Command
 {
-    protected $signature = 'app:assign-company-plans {--email= : Assign only to this company email}';
+    protected $signature = 'app:assign-company-plans
+                            {--email= : Assign only to this company email}
+                            {--force : Re-sync modules from the active plan even if some already exist}';
 
-    protected $description = 'Assign the free plan and modules to companies missing an active subscription';
+    protected $description = 'Sync plan modules and permissions for company accounts';
 
     public function handle(): int
     {
-        $plan = Plan::where('free_plan', true)->where('status', true)->first();
+        $fallbackPlan = Plan::where('free_plan', true)->where('status', true)->first();
 
-        if (! $plan) {
+        if (! $fallbackPlan) {
             $this->error('No active free plan found. Run: php artisan db:seed --class=PlanSeeder');
 
             return self::FAILURE;
@@ -33,26 +35,55 @@ class AssignCompanyPlansCommand extends Command
         $fixed = 0;
 
         foreach ($companies as $company) {
-            $moduleCount = UserActiveModule::where('user_id', $company->id)->count();
+            $plan = $company->active_plan
+                ? Plan::find($company->active_plan)
+                : null;
 
-            if ($company->active_plan && $moduleCount > 0) {
-                $this->line("Skip: {$company->email} (already has plan + {$moduleCount} modules)");
+            if (! $plan || ! $plan->status) {
+                $plan = $fallbackPlan;
+            }
+
+            $expectedModules = collect($plan->modules ?? [])
+                ->filter()
+                ->map(fn ($module) => trim((string) $module))
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+
+            $currentModules = UserActiveModule::where('user_id', $company->id)
+                ->pluck('module')
+                ->sort()
+                ->values()
+                ->all();
+
+            $expectedSorted = collect($expectedModules)->sort()->values()->all();
+            $needsSync = $this->option('force')
+                || empty($currentModules)
+                || $currentModules !== $expectedSorted;
+
+            if (! $needsSync) {
+                $this->line("Skip: {$company->email} (modules already match {$plan->name})");
 
                 continue;
             }
 
-            $result = assignPlan(
-                $plan->id,
-                'Month',
-                implode(',', $plan->modules ?? []),
-                null,
-                $company->id
-            );
+            if ($company->active_plan && $company->plan_expire_date) {
+                $result = syncUserPlanModules($company->id, $plan->id, $expectedModules);
+            } else {
+                $result = assignPlan(
+                    $plan->id,
+                    'Month',
+                    implode(',', $expectedModules),
+                    null,
+                    $company->id
+                );
+            }
 
             if ($result['is_success'] ?? false) {
                 $fixed++;
                 $newCount = UserActiveModule::where('user_id', $company->id)->count();
-                $this->info("Fixed: {$company->email} — {$newCount} modules assigned");
+                $this->info("Synced: {$company->email} — {$newCount} modules from {$plan->name}");
             } else {
                 $this->warn("Failed: {$company->email} — ".($result['error'] ?? 'unknown error'));
             }
