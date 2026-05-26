@@ -78,7 +78,9 @@ class RegisteredUserController extends Controller
                 $user->storage_limit = $freePlan->storage_limit;
                 $user->save();
 
-                ensureCompanySubscriptionReady($user, true);
+                // Fast path only: assign modules at the user level. Default data setup is
+                // deferred so registration completes in < 5s on shared hosting.
+                ensureCompanySubscriptionReady($user, false);
             }
 
             event(new Registered($user));

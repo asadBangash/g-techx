@@ -348,7 +348,16 @@ if (! function_exists('refreshPermissionCache')) {
 
 if (! function_exists('ensureCompanySubscriptionReady')) {
     /**
-     * Make subscribed company modules + sidebar permissions work (critical on shared hosting).
+     * Make subscribed company modules + sidebar permissions work.
+     *
+     * Cheap operations only (safe to call on every login/register on shared hosting):
+     *   - sync addons table from packages/workdo (idempotent updateOrCreate)
+     *   - sync user_active_modules to match plan.modules
+     *   - refresh permission cache
+     *
+     * Heavy operations (only when explicitly requested via the repair command):
+     *   - seedPackagePermissions      → thousands of inserts; run once at deploy
+     *   - dispatchPlanModuleSetup     → per-module default data; can take minutes
      */
     function ensureCompanySubscriptionReady(User $user, bool $withDefaultData = false): void
     {
@@ -383,10 +392,9 @@ if (! function_exists('ensureCompanySubscriptionReady')) {
             applyPlanModulesToUser($company, $planModules, false);
         }
 
-        if (companyRoleMissingPlanPermissions($planModules)) {
-            seedPackagePermissions($planModules);
-        }
-
+        // Permission seeding is a one-time deployment task; do NOT run synchronously here
+        // because it inserts thousands of rows and stalls registration/login on shared hosting.
+        // Run `php artisan app:repair-company-access` once after deploy.
         if ($withDefaultData) {
             dispatchPlanModuleSetup($company, $planModules, false);
         }
