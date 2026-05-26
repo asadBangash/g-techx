@@ -346,22 +346,18 @@ if (! function_exists('dispatchPlanModuleSetup')) {
 
 // Log out and send the user back to login (used after subscription changes).
 if (! function_exists('logoutAndRedirectToLogin')) {
-    function logoutAndRedirectToLogin(string $message, ?string $email = null): \Illuminate\Http\RedirectResponse|\Symfony\Component\HttpFoundation\Response
+    function logoutAndRedirectToLogin(string $message, ?string $email = null): \Illuminate\Http\RedirectResponse
     {
         Auth::guard('web')->logout();
         request()->session()->invalidate();
         request()->session()->regenerate(true);
         request()->session()->regenerateToken();
 
-        session()->flash('success', $message);
+        $params = $email ? ['email' => $email] : [];
 
-        $url = route('login', $email ? ['email' => $email] : []);
-
-        if (request()->header('X-Inertia')) {
-            return \Inertia\Inertia::location($url);
-        }
-
-        return redirect($url);
+        return redirect()
+            ->route('login', $params)
+            ->with('success', $message);
     }
 }
 

@@ -30,9 +30,20 @@ router.on('success', (event) => {
     syncCsrfToken(token);
 });
 
-// Reload on expired CSRF token (419) so the user gets a fresh session
+// Handle Inertia external redirects (409) and expired CSRF tokens (419)
 router.on('invalid', (event) => {
-    if (event.detail.response?.status === 419) {
+    const response = event.detail.response;
+    const status = response?.status;
+
+    if (status === 409) {
+        const location = response.headers?.['x-inertia-location'];
+        if (location) {
+            window.location.href = location;
+            return;
+        }
+    }
+
+    if (status === 419) {
         event.preventDefault();
         window.location.reload();
     }

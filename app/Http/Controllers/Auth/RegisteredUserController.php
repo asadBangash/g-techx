@@ -13,7 +13,6 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Inertia\Inertia;
 use Inertia\Response;
-use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class RegisteredUserController extends Controller
 {
@@ -36,7 +35,7 @@ class RegisteredUserController extends Controller
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function store(Request $request): RedirectResponse|SymfonyResponse
+    public function store(Request $request): RedirectResponse
     {
         $enableRegistration = admin_setting('enableRegistration');
 
@@ -115,14 +114,14 @@ class RegisteredUserController extends Controller
                 SetConfigEmail($adminUser->id);
                 $user->sendEmailVerificationNotification();
 
-                session()->flash('success', __('Account created! Please verify your email, then log in.'));
-
-                return Inertia::location(route('login', ['email' => $user->email]));
+                return redirect()
+                    ->route('login', ['email' => $user->email])
+                    ->with('success', __('Account created! Please verify your email, then log in.'));
             }
 
-            session()->flash('success', __('Account created successfully! Please log in to access your dashboard and features.'));
-
-            return Inertia::location(route('login', ['email' => $user->email]));
+            return redirect()
+                ->route('login', ['email' => $user->email])
+                ->with('success', __('Account created successfully! Please log in to access your dashboard and features.'));
 
         } catch (\Exception $e) {
             report($e);
