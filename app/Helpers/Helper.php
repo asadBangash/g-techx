@@ -324,41 +324,37 @@ if (!function_exists('assignPlan')) {
                 $user->plan_expire_date = null;
             }
             // Handle modules assignment
-            if ($modules !== null) {
-                $modules_array = explode(',', $modules);
+            if (is_array($modules)) {
+                $modules_array = $modules;
+            } elseif (! empty($modules)) {
+                $modules_array = array_filter(array_map('trim', explode(',', $modules)));
             } else {
                 $modules_array = is_array($plan->modules) ? $plan->modules : [];
             }
-           if(!empty($modules))
-            {
+
+            if (! empty($modules_array)) {
                 UserActiveModule::where('user_id', $user->id)->delete();
 
-                $modules_array = explode(',',$modules);
-                $currentActiveModules = UserActiveModule::where('user_id', $user->id)->pluck('module')->toArray();
-                
-                $user_module = $currentActiveModules;
-                foreach ($modules_array as $module) {
-                    if(!in_array($module,$user_module)){
-                        array_push($user_module,$module);
+                foreach ($modules_array as $moduleName) {
+                    $moduleName = trim((string) $moduleName);
+                    if ($moduleName !== '') {
+                        UserActiveModule::create([
+                            'user_id' => $user->id,
+                            'module' => $moduleName,
+                        ]);
                     }
                 }
 
-                $newModules = array_diff($user_module, $currentActiveModules);
-                foreach ($newModules as $moduleName) {
-                    UserActiveModule::create([
-                        'user_id' => $user->id,
-                        'module' => $moduleName,
-                    ]);
-                }
-                DefaultData::dispatch($user->id, $modules);
+                $modules_string = implode(',', $modules_array);
+                DefaultData::dispatch($user->id, $modules_string);
                 $client_role = Role::where('name', 'client')->where('created_by', $user->id)->first();
                 $staff_role = Role::where('name', 'staff')->where('created_by', $user->id)->first();
 
-                if (!empty($client_role)) {
-                    GivePermissionToRole::dispatch($client_role->id, 'client', $modules);
+                if (! empty($client_role)) {
+                    GivePermissionToRole::dispatch($client_role->id, 'client', $modules_string);
                 }
-                if (!empty($staff_role)) {
-                    GivePermissionToRole::dispatch($staff_role->id, 'staff', $modules);
+                if (! empty($staff_role)) {
+                    GivePermissionToRole::dispatch($staff_role->id, 'staff', $modules_string);
                 }
             }
             

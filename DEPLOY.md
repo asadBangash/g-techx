@@ -32,6 +32,7 @@ php artisan key:generate
 php artisan migrate --force
 php artisan db:seed
 php artisan app:sync-modules
+php artisan app:assign-company-plans
 php artisan brand:sync
 
 # 5. Mark installed (optional — auto-detected after seed)

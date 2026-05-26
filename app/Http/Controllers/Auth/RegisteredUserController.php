@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Plan;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -69,6 +70,17 @@ class RegisteredUserController extends Controller
             User::CompanySetting($user->id);
             User::MakeRole($user->id);
             $user->assignRole($user->type);
+
+            $freePlan = Plan::where('free_plan', true)->where('status', true)->first();
+            if ($freePlan) {
+                assignPlan(
+                    $freePlan->id,
+                    'Month',
+                    implode(',', $freePlan->modules ?? []),
+                    null,
+                    $user->id
+                );
+            }
 
             Auth::login($user);
 
