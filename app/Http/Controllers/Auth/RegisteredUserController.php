@@ -78,37 +78,22 @@ class RegisteredUserController extends Controller
                 $user->storage_limit = $freePlan->storage_limit;
                 $user->save();
 
-                // Fast: assign module records only — setup runs after the response is sent.
-                applyPlanModulesToUser($user, $planModules, false);
+                ensureCompanySubscriptionReady($user, true);
             }
 
             event(new Registered($user));
 
-            $plainPassword = $validated['password'];
-            $userId = $user->id;
-            $userEmail = $user->email;
-            $adminId = $adminUser?->id;
-
-            app()->terminating(function () use ($userId, $planModules, $plainPassword, $userEmail, $adminId) {
-                $companyUser = User::find($userId);
-                if (! $companyUser || empty($planModules)) {
-                    return;
+            try {
+                if ($adminUser && admin_setting('New User') === 'on') {
+                    EmailTemplate::sendEmailTemplate('New User', [$user->email], [
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'password' => $validated['password'],
+                    ], $adminUser->id);
                 }
-
-                dispatchPlanModuleSetup($companyUser, $planModules);
-
-                try {
-                    if ($adminId && admin_setting('New User') === 'on') {
-                        EmailTemplate::sendEmailTemplate('New User', [$userEmail], [
-                            'name' => $companyUser->name,
-                            'email' => $userEmail,
-                            'password' => $plainPassword,
-                        ], $adminId);
-                    }
-                } catch (\Throwable $e) {
-                    report($e);
-                }
-            });
+            } catch (\Throwable $e) {
+                report($e);
+            }
 
             if ($enableEmailVerification === 'on') {
                 SetConfigEmail($adminUser->id);

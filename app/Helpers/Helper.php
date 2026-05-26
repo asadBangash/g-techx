@@ -12,6 +12,7 @@ use App\Models\UserActiveModule;
 use App\Models\UserCoupon;
 use App\Models\AddOn;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
 use App\Services\DynamicStorageService;
 use App\Services\StorageConfigService;
 
@@ -243,6 +244,149 @@ if (! function_exists('seedPackagePermissions')) {
     }
 }
 
+if (! function_exists('resolveCompanyUser')) {
+    function resolveCompanyUser(?User $user): ?User
+    {
+        if (! $user) {
+            return null;
+        }
+
+        if ($user->type === 'company') {
+            return $user;
+        }
+
+        return $user->created_by ? User::find($user->created_by) : null;
+    }
+}
+
+if (! function_exists('syncPlanAddonsFromPackages')) {
+    /**
+     * Ensure plan modules exist in the addons table as enabled (required on fresh servers).
+     */
+    function syncPlanAddonsFromPackages(array $moduleNames): void
+    {
+        foreach ($moduleNames as $moduleName) {
+            $moduleName = trim((string) $moduleName);
+            if ($moduleName === '') {
+                continue;
+            }
+
+            $moduleJsonPath = base_path('packages/workdo/'.$moduleName.'/module.json');
+            if (! file_exists($moduleJsonPath)) {
+                continue;
+            }
+
+            $data = json_decode(file_get_contents($moduleJsonPath), true);
+            if (! $data || empty($data['name'])) {
+                continue;
+            }
+
+            AddOn::updateOrCreate(
+                ['module' => $data['name']],
+                [
+                    'name' => $data['alias'] ?? $data['name'],
+                    'monthly_price' => $data['monthly_price'] ?? 0,
+                    'yearly_price' => $data['yearly_price'] ?? 0,
+                    'package_name' => $data['package_name'] ?? null,
+                    'for_admin' => $data['for_admin'] ?? false,
+                    'priority' => $data['priority'] ?? 0,
+                    'is_enable' => true,
+                ]
+            );
+
+            try {
+                (new Module())->moduleCacheForget($data['name']);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+    }
+}
+
+if (! function_exists('companyRoleMissingPlanPermissions')) {
+    function companyRoleMissingPlanPermissions(array $planModules): bool
+    {
+        $companyRole = Role::where('name', 'company')->where('guard_name', 'web')->first();
+        if (! $companyRole || empty($planModules)) {
+            return false;
+        }
+
+        foreach ($planModules as $moduleName) {
+            $permission = Permission::where('add_on', $moduleName)->first();
+            if ($permission && ! $companyRole->hasPermissionTo($permission->name)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
+if (! function_exists('refreshPermissionCache')) {
+    function refreshPermissionCache(?User $user = null): void
+    {
+        try {
+            app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        if ($user) {
+            $user->unsetRelation('roles');
+            $user->unsetRelation('permissions');
+        }
+    }
+}
+
+if (! function_exists('ensureCompanySubscriptionReady')) {
+    /**
+     * Make subscribed company modules + sidebar permissions work (critical on shared hosting).
+     */
+    function ensureCompanySubscriptionReady(User $user, bool $withDefaultData = false): void
+    {
+        $company = resolveCompanyUser($user);
+        if (! $company || ! $company->active_plan) {
+            return;
+        }
+
+        $plan = Plan::find($company->active_plan);
+        if (! $plan) {
+            return;
+        }
+
+        $planModules = is_array($plan->modules)
+            ? array_values(array_filter(array_map('trim', $plan->modules)))
+            : [];
+
+        if (empty($planModules)) {
+            return;
+        }
+
+        syncPlanAddonsFromPackages($planModules);
+
+        $currentModules = UserActiveModule::where('user_id', $company->id)
+            ->pluck('module')
+            ->sort()
+            ->values()
+            ->all();
+        $expectedModules = collect($planModules)->sort()->values()->all();
+
+        if ($currentModules !== $expectedModules) {
+            applyPlanModulesToUser($company, $planModules, false);
+        }
+
+        if (companyRoleMissingPlanPermissions($planModules)) {
+            seedPackagePermissions($planModules);
+        }
+
+        if ($withDefaultData) {
+            dispatchPlanModuleSetup($company, $planModules, false);
+        }
+
+        refreshPermissionCache($user);
+    }
+}
+
 // Users Activated Module
 if (!function_exists('ActivatedModule')) {
     function ActivatedModule($user_id = null)
@@ -315,7 +459,7 @@ if (!function_exists('Module_is_active')) {
 
 // Dispatch module setup events (default data + role permissions).
 if (! function_exists('dispatchPlanModuleSetup')) {
-    function dispatchPlanModuleSetup(User $user, array $modules_array, bool $seedPermissions = false): void
+    function dispatchPlanModuleSetup(User $user, array $modules_array, bool $seedPermissions = true): void
     {
         if (empty($modules_array)) {
             return;
@@ -472,7 +616,11 @@ if (!function_exists('assignPlan')) {
             }
 
             if (! empty($modules_array)) {
-                applyPlanModulesToUser($user, $modules_array);
+                applyPlanModulesToUser($user, $modules_array, true, true);
+            }
+
+            if ($user->type === 'company') {
+                ensureCompanySubscriptionReady($user, false);
             }
             
             // Set user limits from plan (don't modify the plan itself)

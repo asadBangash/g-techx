@@ -46,6 +46,10 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        if (Auth::user()?->type === 'company') {
+            ensureCompanySubscriptionReady(Auth::user(), false);
+        }
+
         // Log login history
         $this->logLoginHistory($request);
 
