@@ -312,9 +312,17 @@ if (! function_exists('companyRoleMissingPlanPermissions')) {
         }
 
         foreach ($planModules as $moduleName) {
-            $permission = Permission::where('add_on', $moduleName)->first();
-            if ($permission && ! $companyRole->hasPermissionTo($permission->name)) {
+            $permissions = Permission::where('add_on', $moduleName)->get();
+
+            // No permissions exist for this module yet — definitely missing.
+            if ($permissions->isEmpty()) {
                 return true;
+            }
+
+            foreach ($permissions as $permission) {
+                if (! $companyRole->hasPermissionTo($permission->name)) {
+                    return true;
+                }
             }
         }
 

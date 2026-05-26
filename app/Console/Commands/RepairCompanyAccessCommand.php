@@ -27,10 +27,26 @@ class RepairCompanyAccessCommand extends Command
             return self::FAILURE;
         }
 
+        // Force-seed permissions for every plan module across all companies first.
+        $allPlanModules = [];
+        foreach ($companies as $company) {
+            $plan = $company->active_plan ? \App\Models\Plan::find($company->active_plan) : null;
+            if ($plan && is_array($plan->modules)) {
+                $allPlanModules = array_merge($allPlanModules, $plan->modules);
+            }
+        }
+        $allPlanModules = array_values(array_unique(array_filter($allPlanModules)));
+
+        if (! empty($allPlanModules)) {
+            $this->info('Seeding package permissions for: '.implode(', ', $allPlanModules));
+            seedPackagePermissions($allPlanModules);
+        }
+
         foreach ($companies as $company) {
             ensureCompanySubscriptionReady($company, true);
             $moduleCount = \App\Models\UserActiveModule::where('user_id', $company->id)->count();
-            $this->info("Repaired: {$company->email} — {$moduleCount} modules");
+            $permCount = $company->getAllPermissions()->count();
+            $this->info("Repaired: {$company->email} — {$moduleCount} modules, {$permCount} permissions");
         }
 
         $this->info('Done. Ask affected users to log out and log back in.');

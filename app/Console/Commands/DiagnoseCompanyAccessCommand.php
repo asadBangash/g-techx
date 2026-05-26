@@ -109,18 +109,28 @@ class DiagnoseCompanyAccessCommand extends Command
             }
 
             $rolePerms = $companyRole ? $companyRole->permissions()->pluck('name')->toArray() : [];
+            $modulesWithNoPerms = [];
             $expected = [];
             foreach ($planModules as $mod) {
                 $p = Permission::where('add_on', $mod)->pluck('name')->toArray();
+                if (empty($p)) {
+                    $modulesWithNoPerms[] = $mod;
+                }
                 $expected = array_merge($expected, $p);
             }
             $missingPerms = array_diff($expected, $rolePerms);
-            if ($missingPerms) {
-                $this->warn('Permissions missing from company role ('.count($missingPerms).'): '.implode(', ', array_slice($missingPerms, 0, 15)).(count($missingPerms) > 15 ? ' ...' : ''));
+
+            if ($modulesWithNoPerms) {
+                $this->warn('Plan modules with ZERO permissions in DB (package seeders never ran): '.implode(', ', $modulesWithNoPerms));
                 $this->line('  Fix: php artisan app:repair-company-access --email='.$company->email);
             }
 
-            if (! $missingFromAddons && ! $missingFromUam && ! $missingPerms) {
+            if ($missingPerms) {
+                $this->warn('Permissions exist but missing from company role ('.count($missingPerms).'): '.implode(', ', array_slice($missingPerms, 0, 15)).(count($missingPerms) > 15 ? ' ...' : ''));
+                $this->line('  Fix: php artisan app:repair-company-access --email='.$company->email);
+            }
+
+            if (! $missingFromAddons && ! $missingFromUam && ! $missingPerms && ! $modulesWithNoPerms) {
                 $this->info('Backend looks healthy. If sidebar is still limited, the issue is the frontend build (packages/workdo missing at npm run build time).');
             }
         }
