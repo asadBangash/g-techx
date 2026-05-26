@@ -51,14 +51,11 @@ class PlanSeeder extends Seeder
             ],
         ];
 
-        $plan = Plan::first();
-        if (!$plan) {
-            foreach ($plans as $plan) {
-                Plan::firstOrCreate(
-                    ['name' => $plan['name']],
-                    $plan
-                );
-            }
+        foreach ($plans as $planData) {
+            Plan::updateOrCreate(
+                ['name' => $planData['name']],
+                $planData
+            );
         }
     }
 }

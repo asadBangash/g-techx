@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
     {
         (new PermissionRoleSeeder())->run();
         (new DefultSetting())->run();
+        (new AddonSeeder())->run();
         (new PlanSeeder())->run();
         (new EmailTemplatesSeeder())->run();
         (new NotificationsTableSeeder())->run();
