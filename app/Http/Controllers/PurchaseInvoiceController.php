@@ -8,6 +8,8 @@ use App\Models\PurchaseInvoiceItemTax;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Http\Requests\StorePurchaseInvoiceRequest;
+use App\Http\Requests\StoreQuickVendorRequest;
+use App\Http\Requests\StoreWarehouseRequest;
 use App\Http\Requests\UpdatePurchaseInvoiceRequest;
 use Workdo\ProductService\Models\ProductServiceItem;
 use Illuminate\Http\Request;
@@ -19,6 +21,11 @@ use App\Events\UpdatePurchaseInvoice;
 use App\Events\DestroyPurchaseInvoice;
 use App\Events\PostPurchaseInvoice;
 use App\Events\EditPurchaseInvoice;
+use App\Events\CreateUser;
+use App\Events\CreateWarehouse;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
 
 
 class PurchaseInvoiceController extends Controller
@@ -38,6 +45,15 @@ class PurchaseInvoiceController extends Controller
         }
         return false;
     }
+
+    private function quickAddUrls(): array
+    {
+        return [
+            'vendor' => route('purchase-invoices.quick.vendor'),
+            'warehouse' => route('purchase-invoices.quick.warehouse'),
+        ];
+    }
+
     public function index(Request $request)
     {
         if(Auth::user()->can('manage-purchase-invoices')){
@@ -141,6 +157,7 @@ class PurchaseInvoiceController extends Controller
                 'vendors' => $vendors,
                 'products' => $products,
                 'warehouses' => $warehouses,
+                'quickAddUrls' => $this->quickAddUrls(),
                 'modules' => [
                     'recurringinvoicebill' => module_is_active('RecurringInvoiceBill')
                 ]
@@ -251,6 +268,7 @@ class PurchaseInvoiceController extends Controller
                 'vendors' => $vendors,
                 'products' => $products,
                 'warehouses' => $warehouses,
+                'quickAddUrls' => $this->quickAddUrls(),
                 'modules' => [
                     'recurringinvoicebill' => module_is_active('RecurringInvoiceBill')
                 ]
@@ -385,6 +403,129 @@ class PurchaseInvoiceController extends Controller
         else{
             return back()->with('error', __('Permission denied'));
         }
+    }
+
+    public function quickStoreVendor(StoreQuickVendorRequest $request)
+    {
+        if (! Auth::user()->can('create-purchase-invoices') || ! Auth::user()->can('create-vendors')) {
+            return response()->json(['message' => __('Permission denied')], 403);
+        }
+
+        $checkUser = canCreateUser();
+        if (! $checkUser['can_create']) {
+            return response()->json(['message' => $checkUser['message']], 422);
+        }
+
+        $validated = $request->validated();
+        $creatorId = creatorId();
+        $role = Role::where('name', 'vendor')->where('created_by', $creatorId)->first();
+
+        if (! $role) {
+            return response()->json(['message' => __('Vendor role not found.')], 422);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $enableEmailVerification = admin_setting('enableEmailVerification');
+
+            $vendorUser = User::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'mobile_no' => $validated['mobile'] ?? null,
+                'password' => Hash::make(Str::random(16)),
+                'email_verified_at' => $enableEmailVerification === 'on' ? null : now(),
+                'type' => 'vendor',
+                'lang' => company_setting('defaultLanguage') ?? 'en',
+                'creator_id' => Auth::id(),
+                'created_by' => $creatorId,
+            ]);
+            $vendorUser->assignRole($role);
+
+            $accountVendor = null;
+            if (class_exists(\Workdo\Account\Models\Vendor::class)) {
+                $billingAddress = [
+                    'name' => $validated['name'],
+                    'address_line_1' => $validated['address'] ?? '-',
+                    'address_line_2' => '',
+                    'city' => $validated['city'] ?? '-',
+                    'state' => $validated['state'] ?? '-',
+                    'country' => $validated['country'] ?? '-',
+                    'zip_code' => $validated['zip_code'] ?? '-',
+                ];
+
+                $accountVendor = \Workdo\Account\Models\Vendor::create([
+                    'user_id' => $vendorUser->id,
+                    'company_name' => $validated['name'],
+                    'contact_person_name' => $validated['name'],
+                    'contact_person_email' => $validated['email'],
+                    'contact_person_mobile' => $validated['mobile'] ?? null,
+                    'billing_address' => $billingAddress,
+                    'shipping_address' => $billingAddress,
+                    'same_as_billing' => true,
+                    'creator_id' => Auth::id(),
+                    'created_by' => $creatorId,
+                ]);
+            }
+
+            DB::commit();
+
+            try {
+                CreateUser::dispatch($request, $vendorUser);
+                if ($accountVendor && class_exists(\Workdo\Account\Events\CreateVendor::class)) {
+                    \Workdo\Account\Events\CreateVendor::dispatch($request, $accountVendor);
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
+
+            return response()->json([
+                'message' => __('The vendor has been created successfully.'),
+                'vendor' => [
+                    'id' => $vendorUser->id,
+                    'name' => $vendorUser->name,
+                    'email' => $vendorUser->email,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            report($e);
+
+            return response()->json(['message' => __('Failed to create vendor.')], 500);
+        }
+    }
+
+    public function quickStoreWarehouse(StoreWarehouseRequest $request)
+    {
+        if (! Auth::user()->can('create-purchase-invoices') || ! Auth::user()->can('create-warehouses')) {
+            return response()->json(['message' => __('Permission denied')], 403);
+        }
+
+        $validated = $request->validated();
+        $validated['is_active'] = $request->boolean('is_active', true);
+
+        $warehouse = new Warehouse();
+        $warehouse->name = $validated['name'];
+        $warehouse->address = $validated['address'];
+        $warehouse->city = $validated['city'];
+        $warehouse->zip_code = $validated['zip_code'];
+        $warehouse->phone = $validated['phone'] ?? null;
+        $warehouse->email = $validated['email'] ?? null;
+        $warehouse->is_active = $validated['is_active'];
+        $warehouse->creator_id = Auth::id();
+        $warehouse->created_by = creatorId();
+        $warehouse->save();
+
+        CreateWarehouse::dispatch($request, $warehouse);
+
+        return response()->json([
+            'message' => __('The warehouse has been created successfully.'),
+            'warehouse' => [
+                'id' => $warehouse->id,
+                'name' => $warehouse->name,
+                'address' => $warehouse->address,
+            ],
+        ]);
     }
 
     public function print(PurchaseInvoice $purchaseInvoice)

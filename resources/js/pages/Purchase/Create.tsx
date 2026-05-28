@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { useTranslation } from 'react-i18next';
 import { useFormFields } from '@/hooks/useFormFields';
 import { PurchaseInvoiceItem } from './types';
 import AuthenticatedLayout from '@/layouts/authenticated-layout';
 import InvoiceItemsTable from './components/InvoiceItemsTable';
+import QuickVendorModal, { QuickVendor } from './components/QuickVendorModal';
+import QuickWarehouseModal, { QuickWarehouse } from '../Sales/components/QuickWarehouseModal';
 import { useTaxCalculator } from './components/TaxCalculator';
 import { formatCurrency } from '@/utils/helpers';
 import { Button } from '@/components/ui/button';
@@ -16,19 +18,43 @@ import { InputError } from '@/components/ui/input-error';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Separator } from '@/components/ui/separator';
-import { CalendarDays, Building2, User, FileText, Package } from 'lucide-react';
+import { CalendarDays, Package, Plus } from 'lucide-react';
 
 interface CreateProps {
     vendors: Array<{id: number; name: string; email: string}>;
     products: Array<{id: number; name: string; sku: string; purchase_price: number; unit: string; type: string; taxes: Array<{id: number; tax_name: string; rate: number}>}>;
     warehouses: Array<{id: number; name: string; address: string}>;
     modules?: {recurringinvoicebill?: boolean};
+    quickAddUrls?: {
+        vendor: string;
+        warehouse: string;
+    };
+    auth: {
+        user: {
+            permissions: string[];
+        };
+    };
     [key: string]: any;
 }
 
 export default function Create() {
     const { t } = useTranslation();
-    const { vendors, products, warehouses, modules } = usePage<CreateProps>().props;
+    const {
+        vendors: initialVendors,
+        products,
+        warehouses: initialWarehouses,
+        modules,
+        quickAddUrls,
+        auth,
+    } = usePage<CreateProps>().props;
+
+    const [vendors, setVendors] = useState(initialVendors);
+    const [warehouses, setWarehouses] = useState(initialWarehouses);
+    const [vendorModalOpen, setVendorModalOpen] = useState(false);
+    const [warehouseModalOpen, setWarehouseModalOpen] = useState(false);
+
+    const canCreateVendor = auth?.user?.permissions?.includes('create-vendors');
+    const canCreateWarehouse = auth?.user?.permissions?.includes('create-warehouses');
 
     const { data, setData, post, processing, errors } = useForm({
         invoice_date: new Date().toISOString().split('T')[0],
@@ -58,6 +84,26 @@ export default function Create() {
     };
 
     const totals = useTaxCalculator(data.items);
+
+    const handleVendorCreated = (vendor: QuickVendor) => {
+        setVendors((prev) => {
+            if (prev.some((item) => item.id === vendor.id)) {
+                return prev;
+            }
+            return [...prev, vendor];
+        });
+        setData('vendor_id', vendor.id.toString());
+    };
+
+    const handleWarehouseCreated = (warehouse: QuickWarehouse) => {
+        setWarehouses((prev) => {
+            if (prev.some((item) => item.id === warehouse.id)) {
+                return prev;
+            }
+            return [...prev, warehouse];
+        });
+        setData('warehouse_id', warehouse.id.toString());
+    };
 
     // Recurring fields hook
     const recurringFields = useFormFields('purchaseInvoiceCreateFields', data, setData, errors, 'create');
@@ -112,9 +158,23 @@ export default function Create() {
                                 </div>
 
                                 <div>
-                                    <Label htmlFor="vendor_id" required>
-                                        {t('Vendor')}
-                                    </Label>
+                                    <div className="flex items-center gap-1.5 mb-1.5">
+                                        <Label htmlFor="vendor_id" required className="mb-0">
+                                            {t('Vendor')}
+                                        </Label>
+                                        {canCreateVendor && (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="icon"
+                                                className="h-6 w-6 shrink-0"
+                                                onClick={() => setVendorModalOpen(true)}
+                                                title={t('Add Vendor')}
+                                            >
+                                                <Plus className="h-3.5 w-3.5" />
+                                            </Button>
+                                        )}
+                                    </div>
                                     <Select value={data.vendor_id} onValueChange={(value) => setData('vendor_id', value)}>
                                         <SelectTrigger>
                                             <SelectValue placeholder={t('Select Vendor')} />
@@ -131,9 +191,23 @@ export default function Create() {
                                 </div>
 
                                 <div>
-                                    <Label htmlFor="warehouse_id" required>
-                                        {t('Warehouse')}
-                                    </Label>
+                                    <div className="flex items-center gap-1.5 mb-1.5">
+                                        <Label htmlFor="warehouse_id" required className="mb-0">
+                                            {t('Warehouse')}
+                                        </Label>
+                                        {canCreateWarehouse && (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="icon"
+                                                className="h-6 w-6 shrink-0"
+                                                onClick={() => setWarehouseModalOpen(true)}
+                                                title={t('Add Warehouse')}
+                                            >
+                                                <Plus className="h-3.5 w-3.5" />
+                                            </Button>
+                                        )}
+                                    </div>
                                     <Select value={data.warehouse_id} onValueChange={(value) => setData('warehouse_id', value)}>
                                         <SelectTrigger>
                                             <SelectValue placeholder={t('Select Warehouse')} />
@@ -283,6 +357,19 @@ export default function Create() {
                     </div>
                 </form>
             </div>
+
+            <QuickVendorModal
+                open={vendorModalOpen}
+                onOpenChange={setVendorModalOpen}
+                onCreated={handleVendorCreated}
+                storeUrl={quickAddUrls?.vendor ?? ''}
+            />
+            <QuickWarehouseModal
+                open={warehouseModalOpen}
+                onOpenChange={setWarehouseModalOpen}
+                onCreated={handleWarehouseCreated}
+                storeUrl={quickAddUrls?.warehouse ?? ''}
+            />
         </AuthenticatedLayout>
     );
 }
