@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Head, useForm, usePage, router } from '@inertiajs/react';
+import React, { useState } from 'react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import { useTranslation } from 'react-i18next';
 import { useFormFields } from '@/hooks/useFormFields';
 import { SalesInvoiceItem } from './types';
 import AuthenticatedLayout from '@/layouts/authenticated-layout';
 import InvoiceItemsTable from './components/InvoiceItemsTable';
+import QuickCustomerModal, { QuickCustomer } from './components/QuickCustomerModal';
+import QuickWarehouseModal, { QuickWarehouse } from './components/QuickWarehouseModal';
 import { useTaxCalculator } from './components/TaxCalculator';
 import { formatCurrency } from '@/utils/helpers';
 import { Button } from '@/components/ui/button';
@@ -17,19 +19,31 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Separator } from '@/components/ui/separator';
-import { CalendarDays, Building2, User, FileText, Package } from 'lucide-react';
+import { CalendarDays, Package, Plus } from 'lucide-react';
 
 interface CreateProps {
     customers: Array<{id: number; name: string; email: string}>;
     warehouses: Array<{id: number; name: string; address: string}>;
     modules?: {recurringinvoicebill?: boolean};
+    auth: {
+        user: {
+            permissions: string[];
+        };
+    };
     [key: string]: any;
 }
 
 export default function Create() {
     const { t } = useTranslation();
-    const { customers, warehouses, modules } = usePage<CreateProps>().props;
+    const { customers: initialCustomers, warehouses: initialWarehouses, modules, auth } = usePage<CreateProps>().props;
+    const [customers, setCustomers] = useState(initialCustomers);
+    const [warehouses, setWarehouses] = useState(initialWarehouses);
+    const [customerModalOpen, setCustomerModalOpen] = useState(false);
+    const [warehouseModalOpen, setWarehouseModalOpen] = useState(false);
     const [availableProducts, setAvailableProducts] = useState([]);
+
+    const canCreateCustomer = auth?.user?.permissions?.includes('create-customers');
+    const canCreateWarehouse = auth?.user?.permissions?.includes('create-warehouses');
 
     const { data, setData, post, processing, errors } = useForm({
         invoice_date: new Date().toISOString().split('T')[0],
@@ -119,6 +133,26 @@ export default function Create() {
 
     const totals = useTaxCalculator(data.items);
 
+    const handleCustomerCreated = (customer: QuickCustomer) => {
+        setCustomers((prev) => {
+            if (prev.some((item) => item.id === customer.id)) {
+                return prev;
+            }
+            return [...prev, customer];
+        });
+        setData('customer_id', customer.id.toString());
+    };
+
+    const handleWarehouseCreated = (warehouse: QuickWarehouse) => {
+        setWarehouses((prev) => {
+            if (prev.some((item) => item.id === warehouse.id)) {
+                return prev;
+            }
+            return [...prev, warehouse];
+        });
+        handleWarehouseChange(warehouse.id.toString());
+    };
+
     // Recurring fields hook
     const recurringFields = useFormFields('salesInvoiceCreateFields', data, setData, errors, 'create');
 
@@ -191,9 +225,23 @@ export default function Create() {
                                 </div>
 
                                 <div>
-                                    <Label htmlFor="customer_id" required>
-                                        {t('Customer')}
-                                    </Label>
+                                    <div className="flex items-center gap-1.5 mb-1.5">
+                                        <Label htmlFor="customer_id" required className="mb-0">
+                                            {t('Customer')}
+                                        </Label>
+                                        {canCreateCustomer && (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="icon"
+                                                className="h-6 w-6 shrink-0"
+                                                onClick={() => setCustomerModalOpen(true)}
+                                                title={t('Add Customer')}
+                                            >
+                                                <Plus className="h-3.5 w-3.5" />
+                                            </Button>
+                                        )}
+                                    </div>
                                     <Select value={data.customer_id} onValueChange={(value) => setData('customer_id', value)}>
                                         <SelectTrigger>
                                             <SelectValue placeholder={t('Select Customer')} />
@@ -211,9 +259,23 @@ export default function Create() {
 
                                 {data.type === 'product' && (
                                     <div>
-                                        <Label htmlFor="warehouse_id" required>
-                                            {t('Warehouse')}
-                                        </Label>
+                                        <div className="flex items-center gap-1.5 mb-1.5">
+                                            <Label htmlFor="warehouse_id" required className="mb-0">
+                                                {t('Warehouse')}
+                                            </Label>
+                                            {canCreateWarehouse && (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="icon"
+                                                    className="h-6 w-6 shrink-0"
+                                                    onClick={() => setWarehouseModalOpen(true)}
+                                                    title={t('Add Warehouse')}
+                                                >
+                                                    <Plus className="h-3.5 w-3.5" />
+                                                </Button>
+                                            )}
+                                        </div>
                                         <Select value={data.warehouse_id} onValueChange={handleWarehouseChange}>
                                             <SelectTrigger>
                                                 <SelectValue placeholder={t('Select Warehouse')} />
@@ -385,6 +447,17 @@ export default function Create() {
                     </div>
                 </form>
             </div>
+
+            <QuickCustomerModal
+                open={customerModalOpen}
+                onOpenChange={setCustomerModalOpen}
+                onCreated={handleCustomerCreated}
+            />
+            <QuickWarehouseModal
+                open={warehouseModalOpen}
+                onOpenChange={setWarehouseModalOpen}
+                onCreated={handleWarehouseCreated}
+            />
         </AuthenticatedLayout>
     );
 }

@@ -8,6 +8,8 @@ use App\Models\SalesInvoiceItemTax;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Http\Requests\StoreSalesInvoiceRequest;
+use App\Http\Requests\StoreQuickCustomerRequest;
+use App\Http\Requests\StoreWarehouseRequest;
 use App\Http\Requests\UpdateSalesInvoiceRequest;
 use Workdo\ProductService\Models\ProductServiceItem;
 use Illuminate\Http\Request;
@@ -19,6 +21,11 @@ use App\Events\UpdateSalesInvoice;
 use App\Events\DestroySalesInvoice;
 use App\Events\PostSalesInvoice;
 use App\Events\EditSalesInvoice;
+use App\Events\CreateUser;
+use App\Events\CreateWarehouse;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
 
 class SalesInvoiceController extends Controller
 {
@@ -418,6 +425,124 @@ class SalesInvoiceController extends Controller
         else{
             return response()->json([], 403);
         }
+    }
+
+    public function quickStoreCustomer(StoreQuickCustomerRequest $request)
+    {
+        if (! Auth::user()->can('create-sales-invoices') || ! Auth::user()->can('create-customers')) {
+            return response()->json(['message' => __('Permission denied')], 403);
+        }
+
+        $checkUser = canCreateUser();
+        if (! $checkUser['can_create']) {
+            return response()->json(['message' => $checkUser['message']], 422);
+        }
+
+        $validated = $request->validated();
+        $creatorId = creatorId();
+        $role = Role::where('name', 'client')->where('created_by', $creatorId)->first();
+
+        if (! $role) {
+            return response()->json(['message' => __('Client role not found.')], 422);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $enableEmailVerification = admin_setting('enableEmailVerification');
+
+            $client = User::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'mobile_no' => $validated['mobile'] ?? null,
+                'password' => Hash::make(Str::random(16)),
+                'email_verified_at' => $enableEmailVerification === 'on' ? null : now(),
+                'type' => 'client',
+                'lang' => company_setting('defaultLanguage') ?? 'en',
+                'creator_id' => Auth::id(),
+                'created_by' => $creatorId,
+            ]);
+            $client->assignRole($role);
+            CreateUser::dispatch($request, $client);
+
+            if (class_exists(\Workdo\Account\Models\Customer::class)) {
+                $billingAddress = [
+                    'name' => $validated['name'],
+                    'address_line_1' => $validated['address'] ?? '-',
+                    'address_line_2' => '',
+                    'city' => $validated['city'] ?? '-',
+                    'state' => $validated['state'] ?? '-',
+                    'country' => $validated['country'] ?? '-',
+                    'zip_code' => $validated['zip_code'] ?? '-',
+                ];
+
+                $customer = \Workdo\Account\Models\Customer::create([
+                    'user_id' => $client->id,
+                    'company_name' => $validated['name'],
+                    'contact_person_name' => $validated['name'],
+                    'contact_person_email' => $validated['email'],
+                    'contact_person_mobile' => $validated['mobile'] ?? null,
+                    'billing_address' => $billingAddress,
+                    'shipping_address' => $billingAddress,
+                    'same_as_billing' => true,
+                    'creator_id' => Auth::id(),
+                    'created_by' => $creatorId,
+                ]);
+
+                if (class_exists(\Workdo\Account\Events\CreateCustomer::class)) {
+                    \Workdo\Account\Events\CreateCustomer::dispatch($request, $customer);
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => __('The customer has been created successfully.'),
+                'customer' => [
+                    'id' => $client->id,
+                    'name' => $client->name,
+                    'email' => $client->email,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            report($e);
+
+            return response()->json(['message' => __('Failed to create customer.')], 500);
+        }
+    }
+
+    public function quickStoreWarehouse(StoreWarehouseRequest $request)
+    {
+        if (! Auth::user()->can('create-sales-invoices') || ! Auth::user()->can('create-warehouses')) {
+            return response()->json(['message' => __('Permission denied')], 403);
+        }
+
+        $validated = $request->validated();
+        $validated['is_active'] = $request->boolean('is_active', true);
+
+        $warehouse = new Warehouse();
+        $warehouse->name = $validated['name'];
+        $warehouse->address = $validated['address'];
+        $warehouse->city = $validated['city'];
+        $warehouse->zip_code = $validated['zip_code'];
+        $warehouse->phone = $validated['phone'] ?? null;
+        $warehouse->email = $validated['email'] ?? null;
+        $warehouse->is_active = $validated['is_active'];
+        $warehouse->creator_id = Auth::id();
+        $warehouse->created_by = creatorId();
+        $warehouse->save();
+
+        CreateWarehouse::dispatch($request, $warehouse);
+
+        return response()->json([
+            'message' => __('The warehouse has been created successfully.'),
+            'warehouse' => [
+                'id' => $warehouse->id,
+                'name' => $warehouse->name,
+                'address' => $warehouse->address,
+            ],
+        ]);
     }
 
     public function print(SalesInvoice $salesInvoice)

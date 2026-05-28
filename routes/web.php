@@ -64,11 +64,13 @@ Route::middleware(['auth', 'verified', 'PlanModuleCheck'])->group(function () {
     Route::get('purchase-invoices/{purchaseInvoice}/print', [PurchaseInvoiceController::class, 'print'])->name('purchase-invoices.print');
 
     // sales invoices
+    Route::post('sales-invoices/quick/customer', [SalesInvoiceController::class, 'quickStoreCustomer'])->name('sales-invoices.quick.customer');
+    Route::post('sales-invoices/quick/warehouse', [SalesInvoiceController::class, 'quickStoreWarehouse'])->name('sales-invoices.quick.warehouse');
+    Route::get('sales-invoices/warehouse/products', [SalesInvoiceController::class, 'getWarehouseProducts'])->name('sales-invoices.warehouse.products');
+    Route::get('sales-invoices/services/list', [SalesInvoiceController::class, 'getServices'])->name('sales-invoices.services');
     Route::resource('sales-invoices', SalesInvoiceController::class);
     Route::post('sales-invoices/{salesInvoice}/post', [SalesInvoiceController::class, 'post'])->name('sales-invoices.post');
     Route::get('sales-invoices/{salesInvoice}/print', [SalesInvoiceController::class, 'print'])->name('sales-invoices.print');
-    Route::get('sales-invoices/warehouse/products', [SalesInvoiceController::class, 'getWarehouseProducts'])->name('sales-invoices.warehouse.products');
-    Route::get('sales-invoices/services/list', [SalesInvoiceController::class, 'getServices'])->name('sales-invoices.services');
 
     // purchase returns
     Route::get('purchase-returns', [PurchaseReturnController::class, 'index'])->name('purchase-returns.index');
