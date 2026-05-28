@@ -18,6 +18,7 @@ interface QuickCustomerModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onCreated: (customer: QuickCustomer) => void;
+    storeUrl: string;
 }
 
 interface FormData {
@@ -42,7 +43,7 @@ const initialForm: FormData = {
     zip_code: '',
 };
 
-export default function QuickCustomerModal({ open, onOpenChange, onCreated }: QuickCustomerModalProps) {
+export default function QuickCustomerModal({ open, onOpenChange, onCreated, storeUrl }: QuickCustomerModalProps) {
     const { t } = useTranslation();
     const [form, setForm] = useState<FormData>(initialForm);
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -60,11 +61,22 @@ export default function QuickCustomerModal({ open, onOpenChange, onCreated }: Qu
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!storeUrl) {
+            setErrors({ email: t('Customer API URL is missing. Clear cache and reload the page.') });
+            return;
+        }
+
         setProcessing(true);
         setErrors({});
 
         try {
-            const response = await axios.post(route('sales-invoices.quick.customer'), form);
+            const response = await axios.post(storeUrl, form, {
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                },
+            });
             onCreated(response.data.customer);
             handleClose();
         } catch (error: any) {
@@ -78,8 +90,12 @@ export default function QuickCustomerModal({ open, onOpenChange, onCreated }: Qu
                     mapped.email = error.response.data.message;
                 }
                 setErrors(mapped);
+            } else if (error.response?.data?.message) {
+                setErrors({ email: error.response.data.message });
+            } else if (error.message) {
+                setErrors({ email: error.message });
             } else {
-                setErrors({ email: error.response?.data?.message || t('Failed to create customer.') });
+                setErrors({ email: t('Failed to create customer.') });
             }
         } finally {
             setProcessing(false);

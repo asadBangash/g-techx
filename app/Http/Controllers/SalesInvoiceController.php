@@ -44,6 +44,14 @@ class SalesInvoiceController extends Controller
         }
         return false;
     }
+    private function quickAddUrls(): array
+    {
+        return [
+            'customer' => route('sales-invoices.quick.customer'),
+            'warehouse' => route('sales-invoices.quick.warehouse'),
+        ];
+    }
+
     public function index(Request $request)
     {
         if(Auth::user()->can('manage-sales-invoices')){
@@ -125,6 +133,7 @@ class SalesInvoiceController extends Controller
             return Inertia::render('Sales/Create', [
                 'customers' => $customers,
                 'warehouses' => $warehouses,
+                'quickAddUrls' => $this->quickAddUrls(),
                 'modules' => [
                     'recurringinvoicebill' => module_is_active('RecurringInvoiceBill')
                 ]
@@ -214,6 +223,7 @@ class SalesInvoiceController extends Controller
                 'invoice' => $salesInvoice,
                 'customers' => $customers,
                 'warehouses' => $warehouses,
+                'quickAddUrls' => $this->quickAddUrls(),
                 'modules' => [
                     'recurringinvoicebill' => module_is_active('RecurringInvoiceBill')
                 ]
@@ -463,8 +473,8 @@ class SalesInvoiceController extends Controller
                 'created_by' => $creatorId,
             ]);
             $client->assignRole($role);
-            CreateUser::dispatch($request, $client);
 
+            $accountCustomer = null;
             if (class_exists(\Workdo\Account\Models\Customer::class)) {
                 $billingAddress = [
                     'name' => $validated['name'],
@@ -476,7 +486,7 @@ class SalesInvoiceController extends Controller
                     'zip_code' => $validated['zip_code'] ?? '-',
                 ];
 
-                $customer = \Workdo\Account\Models\Customer::create([
+                $accountCustomer = \Workdo\Account\Models\Customer::create([
                     'user_id' => $client->id,
                     'company_name' => $validated['name'],
                     'contact_person_name' => $validated['name'],
@@ -488,13 +498,18 @@ class SalesInvoiceController extends Controller
                     'creator_id' => Auth::id(),
                     'created_by' => $creatorId,
                 ]);
-
-                if (class_exists(\Workdo\Account\Events\CreateCustomer::class)) {
-                    \Workdo\Account\Events\CreateCustomer::dispatch($request, $customer);
-                }
             }
 
             DB::commit();
+
+            try {
+                CreateUser::dispatch($request, $client);
+                if ($accountCustomer && class_exists(\Workdo\Account\Events\CreateCustomer::class)) {
+                    \Workdo\Account\Events\CreateCustomer::dispatch($request, $accountCustomer);
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
 
             return response()->json([
                 'message' => __('The customer has been created successfully.'),

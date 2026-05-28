@@ -18,6 +18,7 @@ interface QuickWarehouseModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onCreated: (warehouse: QuickWarehouse) => void;
+    storeUrl: string;
 }
 
 interface FormData {
@@ -38,7 +39,7 @@ const initialForm: FormData = {
     email: '',
 };
 
-export default function QuickWarehouseModal({ open, onOpenChange, onCreated }: QuickWarehouseModalProps) {
+export default function QuickWarehouseModal({ open, onOpenChange, onCreated, storeUrl }: QuickWarehouseModalProps) {
     const { t } = useTranslation();
     const [form, setForm] = useState<FormData>(initialForm);
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -56,13 +57,24 @@ export default function QuickWarehouseModal({ open, onOpenChange, onCreated }: Q
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!storeUrl) {
+            setErrors({ name: t('Warehouse API URL is missing. Clear cache and reload the page.') });
+            return;
+        }
+
         setProcessing(true);
         setErrors({});
 
         try {
-            const response = await axios.post(route('sales-invoices.quick.warehouse'), {
+            const response = await axios.post(storeUrl, {
                 ...form,
                 is_active: true,
+            }, {
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                },
             });
             onCreated(response.data.warehouse);
             handleClose();
@@ -74,8 +86,12 @@ export default function QuickWarehouseModal({ open, onOpenChange, onCreated }: Q
                     mapped[key] = Array.isArray(value) ? value[0] : String(value);
                 });
                 setErrors(mapped);
+            } else if (error.response?.data?.message) {
+                setErrors({ name: error.response.data.message });
+            } else if (error.message) {
+                setErrors({ name: error.message });
             } else {
-                setErrors({ name: error.response?.data?.message || t('Failed to create warehouse.') });
+                setErrors({ name: t('Failed to create warehouse.') });
             }
         } finally {
             setProcessing(false);

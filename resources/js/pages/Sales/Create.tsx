@@ -30,12 +30,16 @@ interface CreateProps {
             permissions: string[];
         };
     };
+    quickAddUrls?: {
+        customer: string;
+        warehouse: string;
+    };
     [key: string]: any;
 }
 
 export default function Create() {
     const { t } = useTranslation();
-    const { customers: initialCustomers, warehouses: initialWarehouses, modules, auth } = usePage<CreateProps>().props;
+    const { customers: initialCustomers, warehouses: initialWarehouses, modules, auth, quickAddUrls } = usePage<CreateProps>().props;
     const [customers, setCustomers] = useState(initialCustomers);
     const [warehouses, setWarehouses] = useState(initialWarehouses);
     const [customerModalOpen, setCustomerModalOpen] = useState(false);
@@ -452,11 +456,13 @@ export default function Create() {
                 open={customerModalOpen}
                 onOpenChange={setCustomerModalOpen}
                 onCreated={handleCustomerCreated}
+                storeUrl={quickAddUrls?.customer ?? ''}
             />
             <QuickWarehouseModal
                 open={warehouseModalOpen}
                 onOpenChange={setWarehouseModalOpen}
                 onCreated={handleWarehouseCreated}
+                storeUrl={quickAddUrls?.warehouse ?? ''}
             />
         </AuthenticatedLayout>
     );
