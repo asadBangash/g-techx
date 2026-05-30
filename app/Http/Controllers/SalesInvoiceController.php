@@ -133,6 +133,7 @@ class SalesInvoiceController extends Controller
             return Inertia::render('Sales/Create', [
                 'customers' => $customers,
                 'warehouses' => $warehouses,
+                'defaultCurrency' => invoice_default_currency(),
                 'quickAddUrls' => $this->quickAddUrls(),
                 'modules' => [
                     'recurringinvoicebill' => module_is_active('RecurringInvoiceBill')
@@ -157,6 +158,8 @@ class SalesInvoiceController extends Controller
             $invoice->type = $request->type ?? 'product';
             $invoice->payment_terms = $request->payment_terms;
             $invoice->notes = $request->notes;
+            $invoice->currency_code = $request->currency_code;
+            $invoice->exchange_rate = $request->exchange_rate;
             $invoice->subtotal = $totals['subtotal'];
             $invoice->tax_amount = $totals['tax_amount'];
             $invoice->discount_amount = $totals['discount_amount'];
@@ -223,6 +226,7 @@ class SalesInvoiceController extends Controller
                 'invoice' => $salesInvoice,
                 'customers' => $customers,
                 'warehouses' => $warehouses,
+                'defaultCurrency' => invoice_default_currency(),
                 'quickAddUrls' => $this->quickAddUrls(),
                 'modules' => [
                     'recurringinvoicebill' => module_is_active('RecurringInvoiceBill')
@@ -248,6 +252,8 @@ class SalesInvoiceController extends Controller
             $salesInvoice->warehouse_id = $salesInvoice->type === 'product' ? $request->warehouse_id : null;
             $salesInvoice->payment_terms = $request->payment_terms;
             $salesInvoice->notes = $request->notes;
+            $salesInvoice->currency_code = $request->currency_code;
+            $salesInvoice->exchange_rate = $request->exchange_rate;
             $salesInvoice->subtotal = $totals['subtotal'];
             $salesInvoice->tax_amount = $totals['tax_amount'];
             $salesInvoice->discount_amount = $totals['discount_amount'];
@@ -448,7 +454,7 @@ class SalesInvoiceController extends Controller
             return response()->json(['message' => $checkUser['message']], 422);
         }
 
-        $validated = $request->validated();
+        $validated = fillQuickContactDefaults($request->validated(), 'customer');
         $creatorId = creatorId();
         $role = Role::where('name', 'client')->where('created_by', $creatorId)->first();
 
@@ -533,7 +539,7 @@ class SalesInvoiceController extends Controller
             return response()->json(['message' => __('Permission denied')], 403);
         }
 
-        $validated = $request->validated();
+        $validated = fillWarehouseDefaults($request->validated());
         $validated['is_active'] = $request->boolean('is_active', true);
 
         $warehouse = new Warehouse();
@@ -541,8 +547,8 @@ class SalesInvoiceController extends Controller
         $warehouse->address = $validated['address'];
         $warehouse->city = $validated['city'];
         $warehouse->zip_code = $validated['zip_code'];
-        $warehouse->phone = $validated['phone'] ?? null;
-        $warehouse->email = $validated['email'] ?? null;
+        $warehouse->phone = $validated['phone'];
+        $warehouse->email = $validated['email'];
         $warehouse->is_active = $validated['is_active'];
         $warehouse->creator_id = Auth::id();
         $warehouse->created_by = creatorId();

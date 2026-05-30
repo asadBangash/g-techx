@@ -24,6 +24,8 @@ class SalesInvoice extends Model
         'type',
         'payment_terms',
         'notes',
+        'currency_code',
+        'exchange_rate',
         'creator_id',
         'created_by'
     ];
@@ -36,7 +38,8 @@ class SalesInvoice extends Model
         'discount_amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
         'paid_amount' => 'decimal:2',
-        'balance_amount' => 'decimal:2'
+        'balance_amount' => 'decimal:2',
+        'exchange_rate' => 'decimal:6'
     ];
 
     protected $appends = ['display_status'];

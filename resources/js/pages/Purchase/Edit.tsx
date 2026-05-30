@@ -6,7 +6,8 @@ import { PurchaseInvoice, PurchaseInvoiceItem } from './types';
 import AuthenticatedLayout from '@/layouts/authenticated-layout';
 import InvoiceItemsTable from './components/InvoiceItemsTable';
 import { useTaxCalculator, calculateLineItemAmounts } from './components/TaxCalculator';
-import { formatCurrency } from '@/utils/helpers';
+import InvoiceCurrencyFields from '@/components/InvoiceCurrencyFields';
+import { formatCurrency, getCompanySetting } from '@/utils/helpers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,7 +21,7 @@ import { CalendarDays, Building2, User, Package } from 'lucide-react';
 
 interface EditProps {
     invoice: PurchaseInvoice;
-    vendors: Array<{id: number; name: string; email: string}>;
+    vendors: Array<{id: number; name: string; email: string; currency_code?: string}>;
     products: Array<{id: number; name: string; sku: string; purchase_price: number; unit: string; type: string; taxes: Array<{id: number; tax_name: string; rate: number}>}>;
     warehouses: Array<{id: number; name: string; address: string}>;
     modules?: {recurringinvoicebill?: boolean};
@@ -29,7 +30,8 @@ interface EditProps {
 
 export default function Edit() {
     const { t } = useTranslation();
-    const { invoice, vendors, products, warehouses, modules } = usePage<EditProps>().props;
+    const { invoice, vendors, products, warehouses, modules, defaultCurrency } = usePage<EditProps>().props;
+    const baseCurrency = defaultCurrency || getCompanySetting('defaultCurrency') || 'USD';
 
 
 
@@ -40,6 +42,8 @@ export default function Edit() {
         warehouse_id: invoice.warehouse_id?.toString() || '',
         payment_terms: invoice.payment_terms || '',
         notes: invoice.notes || '',
+        currency_code: invoice.currency_code || baseCurrency,
+        exchange_rate: invoice.exchange_rate ?? 1,
 
         items: (invoice.items || []).map(item => {
             const calculations = calculateLineItemAmounts(
@@ -57,6 +61,20 @@ export default function Edit() {
             };
         }) as PurchaseInvoiceItem[]
     });
+
+    const handleVendorChange = (vendorId: string) => {
+        const vendor = vendors.find((item) => item.id.toString() === vendorId);
+        if (vendor?.currency_code) {
+            setData((prev) => ({
+                ...prev,
+                vendor_id: vendorId,
+                currency_code: vendor.currency_code!,
+                exchange_rate: vendor.currency_code === baseCurrency ? 1 : prev.exchange_rate,
+            }));
+        } else {
+            setData('vendor_id', vendorId);
+        }
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -121,7 +139,7 @@ export default function Edit() {
                                     <Label htmlFor="vendor_id" required>
                                         {t('Vendor')}
                                     </Label>
-                                    <Select value={data.vendor_id} onValueChange={(value) => setData('vendor_id', value)}>
+                                    <Select value={data.vendor_id} onValueChange={handleVendorChange}>
                                         <SelectTrigger>
                                             <SelectValue placeholder={t('Select Vendor')} />
                                         </SelectTrigger>
@@ -157,6 +175,18 @@ export default function Edit() {
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                <InvoiceCurrencyFields
+                                    currencyCode={data.currency_code}
+                                    exchangeRate={data.exchange_rate}
+                                    defaultCurrency={baseCurrency}
+                                    onCurrencyChange={(code) => setData('currency_code', code)}
+                                    onExchangeRateChange={(rate) => setData('exchange_rate', rate)}
+                                    errors={{
+                                        currency_code: errors.currency_code,
+                                        exchange_rate: errors.exchange_rate,
+                                    }}
+                                />
+
                                 <div>
                                     <Label htmlFor="payment_terms">
                                         {t('Payment Terms')}
@@ -232,6 +262,7 @@ export default function Edit() {
                                 errors={errors}
                                 products={products}
                                 showAddButton={false}
+                                currencyCode={data.currency_code}
                             />
 
                             {/* Invoice Summary */}
@@ -241,20 +272,20 @@ export default function Edit() {
                                     <div>
                                         <div className="flex justify-between text-sm">
                                             <span className="text-muted-foreground">{t('Subtotal')}</span>
-                                            <span className="font-medium">{formatCurrency(totals.subtotal)}</span>
+                                            <span className="font-medium">{formatCurrency(totals.subtotal, undefined, data.currency_code)}</span>
                                         </div>
                                         <div className="flex justify-between text-sm">
                                             <span className="text-muted-foreground">{t('Discount')}</span>
-                                            <span className="font-medium text-red-600">-{formatCurrency(totals.discountAmount)}</span>
+                                            <span className="font-medium text-red-600">-{formatCurrency(totals.discountAmount, undefined, data.currency_code)}</span>
                                         </div>
                                         <div className="flex justify-between text-sm">
                                             <span className="text-muted-foreground">{t('Tax')}</span>
-                                            <span className="font-medium">{formatCurrency(totals.taxAmount)}</span>
+                                            <span className="font-medium">{formatCurrency(totals.taxAmount, undefined, data.currency_code)}</span>
                                         </div>
                                         <Separator className="my-2" />
                                         <div className="flex justify-between">
                                             <span className="font-semibold">{t('Total')}</span>
-                                            <span className="font-bold text-lg">{formatCurrency(totals.total)}</span>
+                                            <span className="font-bold text-lg">{formatCurrency(totals.total, undefined, data.currency_code)}</span>
                                         </div>
                                     </div>
                                 </div>

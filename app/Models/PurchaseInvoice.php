@@ -24,6 +24,8 @@ class PurchaseInvoice extends Model
         'status',
         'payment_terms',
         'notes',
+        'currency_code',
+        'exchange_rate',
         'creator_id',
         'created_by'
     ];
@@ -37,7 +39,8 @@ class PurchaseInvoice extends Model
         'total_amount' => 'decimal:2',
         'paid_amount' => 'decimal:2',
         'debit_note_applied' => 'decimal:2',
-        'balance_amount' => 'decimal:2'
+        'balance_amount' => 'decimal:2',
+        'exchange_rate' => 'decimal:6'
     ];
 
     protected $appends = ['display_status'];

@@ -106,47 +106,43 @@ export default function QuickWarehouseModal({ open, onOpenChange, onCreated, sto
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <Label htmlFor="quick_warehouse_name" required>{t('Name')}</Label>
+                        <Label htmlFor="quick_warehouse_name">{t('Name')}</Label>
                         <Input
                             id="quick_warehouse_name"
                             value={form.name}
                             onChange={(e) => setForm({ ...form, name: e.target.value })}
                             placeholder={t('Enter warehouse name')}
-                            required
                         />
                         <InputError message={errors.name} />
                     </div>
                     <div>
-                        <Label htmlFor="quick_warehouse_address" required>{t('Address')}</Label>
+                        <Label htmlFor="quick_warehouse_address">{t('Address')}</Label>
                         <Input
                             id="quick_warehouse_address"
                             value={form.address}
                             onChange={(e) => setForm({ ...form, address: e.target.value })}
                             placeholder={t('Enter full address')}
-                            required
                         />
                         <InputError message={errors.address} />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <Label htmlFor="quick_warehouse_city" required>{t('City')}</Label>
+                            <Label htmlFor="quick_warehouse_city">{t('City')}</Label>
                             <Input
                                 id="quick_warehouse_city"
                                 value={form.city}
                                 onChange={(e) => setForm({ ...form, city: e.target.value })}
                                 placeholder={t('Enter city')}
-                                required
                             />
                             <InputError message={errors.city} />
                         </div>
                         <div>
-                            <Label htmlFor="quick_warehouse_zip" required>{t('Zip Code')}</Label>
+                            <Label htmlFor="quick_warehouse_zip">{t('Zip Code')}</Label>
                             <Input
                                 id="quick_warehouse_zip"
                                 value={form.zip_code}
                                 onChange={(e) => setForm({ ...form, zip_code: e.target.value })}
                                 placeholder={t('Enter zip code')}
-                                required
                             />
                             <InputError message={errors.zip_code} />
                         </div>

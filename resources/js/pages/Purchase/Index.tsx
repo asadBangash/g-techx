@@ -155,25 +155,25 @@ export default function Index() {
             key: 'subtotal',
             header: t('Subtotal'),
             sortable: true,
-            render: (value: number) => formatCurrency(value)
+            render: (value: number, invoice: PurchaseInvoice) => formatCurrency(value, undefined, invoice.currency_code)
         },
         {
             key: 'tax_amount',
             header: t('Tax'),
             sortable: true,
-            render: (value: number) => formatCurrency(value)
+            render: (value: number, invoice: PurchaseInvoice) => formatCurrency(value, undefined, invoice.currency_code)
         },
         {
             key: 'total_amount',
             header: t('Total Amount'),
             sortable: true,
-            render: (value: number) => formatCurrency(value)
+            render: (value: number, invoice: PurchaseInvoice) => formatCurrency(value, undefined, invoice.currency_code)
         },
         {
             key: 'balance_amount',
             header: t('Balance'),
             sortable: true,
-            render: (value: number) => formatCurrency(value)
+            render: (value: number, invoice: PurchaseInvoice) => formatCurrency(value, undefined, invoice.currency_code)
         },
         {
             key: 'status',
@@ -507,21 +507,21 @@ export default function Index() {
                                                         <div className="grid grid-cols-2 gap-2 text-xs">
                                                             <div className="flex justify-between">
                                                                 <span className="text-gray-600">{t('Subtotal')}:</span>
-                                                                <span className="font-medium">{formatCurrency(invoice.subtotal)}</span>
+                                                                <span className="font-medium">{formatCurrency(invoice.subtotal, undefined, invoice.currency_code)}</span>
                                                             </div>
                                                             <div className="flex justify-between">
                                                                 <span className="text-gray-600">{t('Tax')}:</span>
-                                                                <span className="font-medium">{formatCurrency(invoice.tax_amount)}</span>
+                                                                <span className="font-medium">{formatCurrency(invoice.tax_amount, undefined, invoice.currency_code)}</span>
                                                             </div>
                                                         </div>
                                                         <div className="border-t mt-2 pt-2">
                                                             <div className="flex justify-between items-center">
                                                                 <span className="text-sm font-semibold text-gray-900">{t('Total Amount')}</span>
-                                                                <span className="text-lg font-bold text-gray-900">{formatCurrency(invoice.total_amount)}</span>
+                                                                <span className="text-lg font-bold text-gray-900">{formatCurrency(invoice.total_amount, undefined, invoice.currency_code)}</span>
                                                             </div>
                                                             <div className="flex justify-between items-center mt-1">
                                                                 <span className="text-xs text-gray-600">{t('Balance Due')}</span>
-                                                                <span className="text-sm font-semibold text-blue-600">{formatCurrency(invoice.balance_amount)}</span>
+                                                                <span className="text-sm font-semibold text-blue-600">{formatCurrency(invoice.balance_amount, undefined, invoice.currency_code)}</span>
                                                             </div>
                                                         </div>
                                                     </div>

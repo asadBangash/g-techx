@@ -16,9 +16,10 @@ interface Props {
     products?: Array<{id: number; name: string; sale_price: number; unit?: string; stock_quantity?: number; taxes?: Array<{id: number; tax_name: string; rate: number}>}>;
     showAddButton?: boolean;
     invoiceType?: string;
+    currencyCode?: string;
 }
 
-export default function InvoiceItemsTable({ items, onChange, errors, products = [], showAddButton = true, invoiceType = 'product' }: Props) {
+export default function InvoiceItemsTable({ items, onChange, errors, products = [], showAddButton = true, invoiceType = 'product', currencyCode }: Props) {
     const { t } = useTranslation();
 
     const addItem = () => {
@@ -212,7 +213,7 @@ export default function InvoiceItemsTable({ items, onChange, errors, products = 
                                 </td>
                                 <td className="px-4 py-4">
                                     <span className="text-sm font-medium">
-                                        {formatCurrency(item.total_amount)}
+                                        {formatCurrency(item.total_amount, undefined, currencyCode)}
                                     </span>
                                 </td>
                                 <td className="px-4 py-4 text-center">

@@ -8,7 +8,8 @@ import InvoiceItemsTable from './components/InvoiceItemsTable';
 import QuickVendorModal, { QuickVendor } from './components/QuickVendorModal';
 import QuickWarehouseModal, { QuickWarehouse } from '../Sales/components/QuickWarehouseModal';
 import { useTaxCalculator } from './components/TaxCalculator';
-import { formatCurrency } from '@/utils/helpers';
+import InvoiceCurrencyFields from '@/components/InvoiceCurrencyFields';
+import { formatCurrency, getCompanySetting } from '@/utils/helpers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,7 +22,7 @@ import { Separator } from '@/components/ui/separator';
 import { CalendarDays, Package, Plus } from 'lucide-react';
 
 interface CreateProps {
-    vendors: Array<{id: number; name: string; email: string}>;
+    vendors: Array<{id: number; name: string; email: string; currency_code?: string}>;
     products: Array<{id: number; name: string; sku: string; purchase_price: number; unit: string; type: string; taxes: Array<{id: number; tax_name: string; rate: number}>}>;
     warehouses: Array<{id: number; name: string; address: string}>;
     modules?: {recurringinvoicebill?: boolean};
@@ -46,7 +47,9 @@ export default function Create() {
         modules,
         quickAddUrls,
         auth,
+        defaultCurrency,
     } = usePage<CreateProps>().props;
+    const baseCurrency = defaultCurrency || getCompanySetting('defaultCurrency') || 'USD';
 
     const [vendors, setVendors] = useState(initialVendors);
     const [warehouses, setWarehouses] = useState(initialWarehouses);
@@ -63,6 +66,8 @@ export default function Create() {
         warehouse_id: '',
         payment_terms: '',
         notes: '',
+        currency_code: baseCurrency,
+        exchange_rate: 1,
         sync_to_google_calendar: false,
         items: [{
             product_id: 0,
@@ -84,6 +89,20 @@ export default function Create() {
     };
 
     const totals = useTaxCalculator(data.items);
+
+    const handleVendorChange = (vendorId: string) => {
+        const vendor = vendors.find((item) => item.id.toString() === vendorId);
+        if (vendor?.currency_code) {
+            setData((prev) => ({
+                ...prev,
+                vendor_id: vendorId,
+                currency_code: vendor.currency_code!,
+                exchange_rate: vendor.currency_code === baseCurrency ? 1 : prev.exchange_rate,
+            }));
+        } else {
+            setData('vendor_id', vendorId);
+        }
+    };
 
     const handleVendorCreated = (vendor: QuickVendor) => {
         setVendors((prev) => {
@@ -175,7 +194,7 @@ export default function Create() {
                                             </Button>
                                         )}
                                     </div>
-                                    <Select value={data.vendor_id} onValueChange={(value) => setData('vendor_id', value)}>
+                                    <Select value={data.vendor_id} onValueChange={handleVendorChange}>
                                         <SelectTrigger>
                                             <SelectValue placeholder={t('Select Vendor')} />
                                         </SelectTrigger>
@@ -225,6 +244,18 @@ export default function Create() {
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                <InvoiceCurrencyFields
+                                    currencyCode={data.currency_code}
+                                    exchangeRate={data.exchange_rate}
+                                    defaultCurrency={baseCurrency}
+                                    onCurrencyChange={(code) => setData('currency_code', code)}
+                                    onExchangeRateChange={(rate) => setData('exchange_rate', rate)}
+                                    errors={{
+                                        currency_code: errors.currency_code,
+                                        exchange_rate: errors.exchange_rate,
+                                    }}
+                                />
+
                                 <div>
                                     <Label htmlFor="payment_terms">
                                         {t('Payment Terms')}
@@ -304,6 +335,7 @@ export default function Create() {
                                 errors={errors}
                                 products={products}
                                 showAddButton={false}
+                                currencyCode={data.currency_code}
                             />
 
                             {/* Invoice Summary - Bottom of Items */}
@@ -313,20 +345,20 @@ export default function Create() {
                                     <div>
                                         <div className="flex justify-between text-sm">
                                             <span className="text-muted-foreground">{t('Subtotal')}</span>
-                                            <span className="font-medium">{formatCurrency(totals.subtotal)}</span>
+                                            <span className="font-medium">{formatCurrency(totals.subtotal, undefined, data.currency_code)}</span>
                                         </div>
                                         <div className="flex justify-between text-sm">
                                             <span className="text-muted-foreground">{t('Discount')}</span>
-                                            <span className="font-medium text-red-600">-{formatCurrency(totals.discountAmount)}</span>
+                                            <span className="font-medium text-red-600">-{formatCurrency(totals.discountAmount, undefined, data.currency_code)}</span>
                                         </div>
                                         <div className="flex justify-between text-sm">
                                             <span className="text-muted-foreground">{t('Tax')}</span>
-                                            <span className="font-medium">{formatCurrency(totals.taxAmount)}</span>
+                                            <span className="font-medium">{formatCurrency(totals.taxAmount, undefined, data.currency_code)}</span>
                                         </div>
                                         <Separator className="my-2" />
                                         <div className="flex justify-between">
                                             <span className="font-semibold">{t('Total')}</span>
-                                            <span className="font-bold text-lg">{formatCurrency(totals.total)}</span>
+                                            <span className="font-bold text-lg">{formatCurrency(totals.total, undefined, data.currency_code)}</span>
                                         </div>
                                     </div>
                                 </div>

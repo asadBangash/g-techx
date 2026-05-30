@@ -110,25 +110,23 @@ export default function QuickVendorModal({ open, onOpenChange, onCreated, storeU
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <Label htmlFor="quick_vendor_name" required>{t('Vendor Name')}</Label>
+                        <Label htmlFor="quick_vendor_name">{t('Vendor Name')}</Label>
                         <Input
                             id="quick_vendor_name"
                             value={form.name}
                             onChange={(e) => setForm({ ...form, name: e.target.value })}
                             placeholder={t('Enter vendor name')}
-                            required
                         />
                         <InputError message={errors.name} />
                     </div>
                     <div>
-                        <Label htmlFor="quick_vendor_email" required>{t('Email')}</Label>
+                        <Label htmlFor="quick_vendor_email">{t('Email')}</Label>
                         <Input
                             id="quick_vendor_email"
                             type="email"
                             value={form.email}
                             onChange={(e) => setForm({ ...form, email: e.target.value })}
                             placeholder={t('Enter email address')}
-                            required
                         />
                         <InputError message={errors.email} />
                     </div>

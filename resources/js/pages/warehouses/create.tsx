@@ -54,7 +54,6 @@ export default function Create({ onSuccess }: CreateWarehouseProps) {
                             value={data.name}
                             onChange={(e) => setData('name', e.target.value)}
                             placeholder={t('Enter warehouse name')}
-                            required
                         />
                         <InputError message={errors.name} />
                     </div>
@@ -67,7 +66,6 @@ export default function Create({ onSuccess }: CreateWarehouseProps) {
                         value={data.address}
                         onChange={(e) => setData('address', e.target.value)}
                         placeholder={t('Enter full address')}
-                        required
                     />
                     <InputError message={errors.address} />
                 </div>
@@ -79,7 +77,6 @@ export default function Create({ onSuccess }: CreateWarehouseProps) {
                             value={data.city}
                             onChange={(e) => setData('city', e.target.value)}
                             placeholder={t('Enter city')}
-                            required
                         />
                         <InputError message={errors.city} />
                     </div>
@@ -90,7 +87,6 @@ export default function Create({ onSuccess }: CreateWarehouseProps) {
                             value={data.zip_code}
                             onChange={(e) => setData('zip_code', e.target.value)}
                             placeholder={t('Enter zip code')}
-                            required
                         />
                         <InputError message={errors.zip_code} />
                     </div>

@@ -14,6 +14,7 @@ interface PrintProps {
 export default function Print() {
     const { t } = useTranslation();
     const { invoice } = usePage<PrintProps>().props;
+    const currencyCode = invoice.currency_code;
     const [isDownloading, setIsDownloading] = useState(false);
 
     const signaturePrintButtons = usePageButtons('signaturePrintBtn', {
@@ -150,12 +151,12 @@ export default function Print() {
                                         )}
                                     </td>
                                     <td className="text-center py-4">{item.quantity}</td>
-                                    <td className="text-right py-4">{formatCurrency(item.unit_price)}</td>
+                                    <td className="text-right py-4">{formatCurrency(item.unit_price, undefined, currencyCode)}</td>
                                     <td className="text-right py-4">
                                         {item.discount_percentage > 0 ? (
                                             <>
                                                 <div className="text-sm">{item.discount_percentage}%</div>
-                                                <div className="text-sm font-medium">-{formatCurrency(item.discount_amount)}</div>
+                                                <div className="text-sm font-medium">-{formatCurrency(item.discount_amount, undefined, currencyCode)}</div>
                                             </>
                                         ) : (
                                             <div className="text-sm">0%</div>
@@ -167,18 +168,18 @@ export default function Print() {
                                                 {item.taxes.map((tax, taxIndex) => (
                                                     <div key={taxIndex} className="text-sm">{tax.tax_name} ({tax.tax_rate}%)</div>
                                                 ))}
-                                                <div className="text-sm font-medium">{formatCurrency(item.tax_amount)}</div>
+                                                <div className="text-sm font-medium">{formatCurrency(item.tax_amount, undefined, currencyCode)}</div>
                                             </>
                                         ) : item.tax_percentage > 0 ? (
                                             <>
                                                 <div className="text-sm">{item.tax_percentage}%</div>
-                                                <div className="text-sm font-medium">{formatCurrency(item.tax_amount)}</div>
+                                                <div className="text-sm font-medium">{formatCurrency(item.tax_amount, undefined, currencyCode)}</div>
                                             </>
                                         ) : (
                                             <div className="text-sm">0%</div>
                                         )}
                                     </td>
-                                    <td className="text-right py-4 font-semibold">{formatCurrency(item.total_amount)}</td>
+                                    <td className="text-right py-4 font-semibold">{formatCurrency(item.total_amount, undefined, currencyCode)}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -192,24 +193,24 @@ export default function Print() {
                             <div className="space-y-2">
                                 <div className="flex justify-between">
                                     <span>{t('Subtotal')}:</span>
-                                    <span>{formatCurrency(invoice.subtotal)}</span>
+                                    <span>{formatCurrency(invoice.subtotal, undefined, currencyCode)}</span>
                                 </div>
                                 {invoice.discount_amount > 0 && (
                                     <div className="flex justify-between">
                                         <span>{t('Discount')}:</span>
-                                        <span>-{formatCurrency(invoice.discount_amount)}</span>
+                                        <span>-{formatCurrency(invoice.discount_amount, undefined, currencyCode)}</span>
                                     </div>
                                 )}
                                 {invoice.tax_amount > 0 && (
                                     <div className="flex justify-between">
                                         <span>{t('Tax')}:</span>
-                                        <span>{formatCurrency(invoice.tax_amount)}</span>
+                                        <span>{formatCurrency(invoice.tax_amount, undefined, currencyCode)}</span>
                                     </div>
                                 )}
                                 <div className="border-t border-gray-400 pt-2 mt-2">
                                     <div className="flex justify-between font-bold text-lg">
                                         <span>{t('TOTAL')}:</span>
-                                        <span>{formatCurrency(invoice.total_amount)}</span>
+                                        <span>{formatCurrency(invoice.total_amount, undefined, currencyCode)}</span>
                                     </div>
                                 </div>
                             </div>

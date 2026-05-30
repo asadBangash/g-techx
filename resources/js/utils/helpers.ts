@@ -140,9 +140,31 @@ const getImagePath = (path: string, pageProps?: any): string => {
 };
 
 /**
+ * Get currency symbol by ISO code
+ */
+const getCurrencySymbolByCode = (currencyCode: string, pageProps?: any): string => {
+  try {
+    let currencies;
+    if (pageProps?.currencies) {
+      currencies = pageProps.currencies;
+    } else {
+      const { props } = usePage();
+      currencies = (props as any).currencies || [];
+    }
+    const found = currencies.find((c: { code: string; symbol: string }) => c.code === currencyCode);
+    if (found?.symbol) {
+      return found.symbol;
+    }
+    return getCurrencySymbol(pageProps);
+  } catch {
+    return '$';
+  }
+};
+
+/**
  * Format currency based on saved settings
  */
-const formatCurrency = (amount: number | string, pageProps?: any): string => {
+const formatCurrency = (amount: number | string, pageProps?: any, currencyCode?: string): string => {
   try {
     const num = Number(amount) || 0;
     const decimalPlaces = parseInt(getCompanySetting('decimalFormat', pageProps) || '2');
@@ -160,7 +182,9 @@ const formatCurrency = (amount: number | string, pageProps?: any): string => {
     }
 
     const formattedNumber = parts.join(decimalSeparator);
-    const symbol = getCurrencySymbol(pageProps);
+    const symbol = currencyCode
+      ? getCurrencySymbolByCode(currencyCode, pageProps)
+      : getCurrencySymbol(pageProps);
     const space = currencySymbolSpace ? ' ' : '';
 
     return currencySymbolPosition === 'before'
@@ -435,6 +459,7 @@ export {
     formatCurrency,
     formatAdminCurrency,
     getCurrencySymbol,
+    getCurrencySymbolByCode,
     getAdminCurrencySymbol,
     isPackageActive,
     getCompanySetting,

@@ -55,7 +55,7 @@ class VendorController extends Controller
     public function store(StoreVendorRequest $request)
     {
         if(Auth::user()->can('create-vendors')){
-            $validated = $request->validated();
+            $validated = fillAccountPartyDefaults($request->validated(), 'vendor');
 
             $vendor = new Vendor();
             $vendor->user_id = $validated['user_id'] ?? null;

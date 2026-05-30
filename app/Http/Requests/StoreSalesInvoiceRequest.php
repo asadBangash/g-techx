@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreSalesInvoiceRequest extends FormRequest
 {
@@ -21,6 +22,8 @@ class StoreSalesInvoiceRequest extends FormRequest
             'warehouse_id' => 'required_if:type,product|nullable|integer|exists:warehouses,id',
             'payment_terms' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
+            'currency_code' => ['required', 'string', 'size:3', Rule::in(valid_currency_codes())],
+            'exchange_rate' => 'required|numeric|min:0.000001',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|integer|min:1',
             'items.*.quantity' => 'required|integer|min:1',

@@ -8,7 +8,8 @@ import InvoiceItemsTable from './components/InvoiceItemsTable';
 import QuickCustomerModal, { QuickCustomer } from './components/QuickCustomerModal';
 import QuickWarehouseModal, { QuickWarehouse } from './components/QuickWarehouseModal';
 import { useTaxCalculator } from './components/TaxCalculator';
-import { formatCurrency } from '@/utils/helpers';
+import InvoiceCurrencyFields from '@/components/InvoiceCurrencyFields';
+import { formatCurrency, getCompanySetting } from '@/utils/helpers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -39,7 +40,8 @@ interface CreateProps {
 
 export default function Create() {
     const { t } = useTranslation();
-    const { customers: initialCustomers, warehouses: initialWarehouses, modules, auth, quickAddUrls } = usePage<CreateProps>().props;
+    const { customers: initialCustomers, warehouses: initialWarehouses, modules, auth, quickAddUrls, defaultCurrency } = usePage<CreateProps>().props;
+    const baseCurrency = defaultCurrency || getCompanySetting('defaultCurrency') || 'USD';
     const [customers, setCustomers] = useState(initialCustomers);
     const [warehouses, setWarehouses] = useState(initialWarehouses);
     const [customerModalOpen, setCustomerModalOpen] = useState(false);
@@ -57,6 +59,8 @@ export default function Create() {
         type: 'product',
         payment_terms: '',
         notes: '',
+        currency_code: baseCurrency,
+        exchange_rate: 1,
         sync_to_google_calendar: false,
         items: [{
             product_id: 0,
@@ -298,6 +302,18 @@ export default function Create() {
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                <InvoiceCurrencyFields
+                                    currencyCode={data.currency_code}
+                                    exchangeRate={data.exchange_rate}
+                                    defaultCurrency={baseCurrency}
+                                    onCurrencyChange={(code) => setData('currency_code', code)}
+                                    onExchangeRateChange={(rate) => setData('exchange_rate', rate)}
+                                    errors={{
+                                        currency_code: errors.currency_code,
+                                        exchange_rate: errors.exchange_rate,
+                                    }}
+                                />
+
                                 <div>
                                     <Label htmlFor="payment_terms">
                                         {t('Payment Terms')}
@@ -398,6 +414,7 @@ export default function Create() {
                                 products={availableProducts}
                                 showAddButton={false}
                                 invoiceType={data.type}
+                                currencyCode={data.currency_code}
                             />
 
                             <div className="mt-6 flex justify-end">
@@ -406,20 +423,20 @@ export default function Create() {
                                     <div>
                                         <div className="flex justify-between text-sm">
                                             <span className="text-muted-foreground">{t('Subtotal')}</span>
-                                            <span className="font-medium">{formatCurrency(totals.subtotal)}</span>
+                                            <span className="font-medium">{formatCurrency(totals.subtotal, undefined, data.currency_code)}</span>
                                         </div>
                                         <div className="flex justify-between text-sm">
                                             <span className="text-muted-foreground">{t('Discount')}</span>
-                                            <span className="font-medium text-red-600">-{formatCurrency(totals.discountAmount)}</span>
+                                            <span className="font-medium text-red-600">-{formatCurrency(totals.discountAmount, undefined, data.currency_code)}</span>
                                         </div>
                                         <div className="flex justify-between text-sm">
                                             <span className="text-muted-foreground">{t('Tax')}</span>
-                                            <span className="font-medium">{formatCurrency(totals.taxAmount)}</span>
+                                            <span className="font-medium">{formatCurrency(totals.taxAmount, undefined, data.currency_code)}</span>
                                         </div>
                                         <Separator className="my-2" />
                                         <div className="flex justify-between">
                                             <span className="font-semibold">{t('Total')}</span>
-                                            <span className="font-bold text-lg">{formatCurrency(totals.total)}</span>
+                                            <span className="font-bold text-lg">{formatCurrency(totals.total, undefined, data.currency_code)}</span>
                                         </div>
                                     </div>
                                 </div>

@@ -53,7 +53,7 @@ class CustomerController extends Controller
     public function store(StoreCustomerRequest $request)
     {
         if(Auth::user()->can('create-customers')){
-            $validated = $request->validated();
+            $validated = fillAccountPartyDefaults($request->validated(), 'customer');
 
             $customer = new Customer();
             $customer->user_id = $validated['user_id'] ?? null;

@@ -110,25 +110,23 @@ export default function QuickCustomerModal({ open, onOpenChange, onCreated, stor
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <Label htmlFor="quick_customer_name" required>{t('Customer Name')}</Label>
+                        <Label htmlFor="quick_customer_name">{t('Customer Name')}</Label>
                         <Input
                             id="quick_customer_name"
                             value={form.name}
                             onChange={(e) => setForm({ ...form, name: e.target.value })}
                             placeholder={t('Enter customer name')}
-                            required
                         />
                         <InputError message={errors.name} />
                     </div>
                     <div>
-                        <Label htmlFor="quick_customer_email" required>{t('Email')}</Label>
+                        <Label htmlFor="quick_customer_email">{t('Email')}</Label>
                         <Input
                             id="quick_customer_email"
                             type="email"
                             value={form.email}
                             onChange={(e) => setForm({ ...form, email: e.target.value })}
                             placeholder={t('Enter email address')}
-                            required
                         />
                         <InputError message={errors.email} />
                     </div>

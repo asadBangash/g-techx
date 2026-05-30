@@ -14,8 +14,8 @@ class StoreQuickVendorRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email',
+            'name' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255|unique:users,email',
             'mobile' => 'nullable|string|max:255',
             'address' => 'nullable|string|max:255',
             'city' => 'nullable|string|max:255',

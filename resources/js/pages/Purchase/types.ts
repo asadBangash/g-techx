@@ -15,6 +15,8 @@ export interface PurchaseInvoice {
     display_status: 'draft' | 'posted' | 'partial' | 'paid' | 'overdue';
     payment_terms?: string;
     notes?: string;
+    currency_code?: string;
+    exchange_rate?: number;
     creator_id: number;
     created_by: number;
     created_at: string;
@@ -61,6 +63,7 @@ export interface VendorDetails {
     shipping_address?: Address;
     same_as_billing: boolean;
     notes?: string;
+    currency_code?: string;
 }
 
 export interface Address {

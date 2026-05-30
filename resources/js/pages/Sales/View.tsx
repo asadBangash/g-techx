@@ -20,6 +20,7 @@ interface ViewProps {
 export default function View() {
     const { t } = useTranslation();
     const { invoice, auth } = usePage<ViewProps>().props;
+    const currencyCode = invoice.currency_code;
 
     const pageButtons = usePageButtons('zatcaQRCodeBtn', invoice);
 
@@ -56,7 +57,7 @@ export default function View() {
                                     {t(invoice.status.toUpperCase())}
                                 </span>
                                 <div className="text-right">
-                                    <div className="text-2xl font-bold">{formatCurrency(invoice.total_amount)}</div>
+                                    <div className="text-2xl font-bold">{formatCurrency(invoice.total_amount, undefined, currencyCode)}</div>
                                     <div className="text-sm text-muted-foreground">{t('Total Amount')}</div>
                                 </div>
                             </div>
@@ -107,6 +108,17 @@ export default function View() {
                                             {formatDate(invoice.due_date)}
                                         </span>
                                     </div>
+                                    {invoice.currency_code && (
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">{t('Currency')}</span>
+                                            <span>
+                                                {invoice.currency_code}
+                                                {invoice.exchange_rate && Number(invoice.exchange_rate) !== 1 && (
+                                                    <span className="text-muted-foreground"> ({t('Rate')}: {invoice.exchange_rate})</span>
+                                                )}
+                                            </span>
+                                        </div>
+                                    )}
                                     {invoice.type === 'product' && invoice.warehouse && (
                                         <div className="flex justify-between">
                                             <span className="text-muted-foreground">{t('Warehouse')}</span>
@@ -157,7 +169,7 @@ export default function View() {
                                             )}
                                         </div>
                                         <div className="text-right sm:text-right">
-                                            <div className="text-lg sm:text-xl font-bold text-blue-600">{formatCurrency(invoice.balance_amount)}</div>
+                                            <div className="text-lg sm:text-xl font-bold text-blue-600">{formatCurrency(invoice.balance_amount, undefined, currencyCode)}</div>
                                             <div className="text-xs sm:text-sm text-muted-foreground">{t('Balance Due')}</div>
                                         </div>
                                     </div>
@@ -214,13 +226,13 @@ export default function View() {
                                             {invoice.type === 'product' && (
                                                 <td className="px-4 py-4 text-right">{item.quantity}</td>
                                             )}
-                                            <td className="px-4 py-4 text-right">{formatCurrency(item.unit_price)}</td>
+                                            <td className="px-4 py-4 text-right">{formatCurrency(item.unit_price, undefined, currencyCode)}</td>
                                             <td className="px-4 py-4 text-right">
                                                 {item.discount_percentage > 0 ? (
                                                     <div>
                                                         <div>{item.discount_percentage}%</div>
                                                         <div className="text-sm text-muted-foreground">
-                                                            -{formatCurrency(item.discount_amount)}
+                                                            -{formatCurrency(item.discount_amount, undefined, currencyCode)}
                                                         </div>
                                                     </div>
                                                 ) : '-'}
@@ -232,20 +244,20 @@ export default function View() {
                                                             <div key={taxIndex} className="text-sm">{tax.tax_name} ({tax.tax_rate}%)</div>
                                                         ))}
                                                         <div className="text-sm text-muted-foreground">
-                                                            {formatCurrency(item.tax_amount)}
+                                                            {formatCurrency(item.tax_amount, undefined, currencyCode)}
                                                         </div>
                                                     </div>
                                                 ) : item.tax_percentage > 0 ? (
                                                     <div>
                                                         <div>{item.tax_percentage}%</div>
                                                         <div className="text-sm text-muted-foreground">
-                                                            {formatCurrency(item.tax_amount)}
+                                                            {formatCurrency(item.tax_amount, undefined, currencyCode)}
                                                         </div>
                                                     </div>
                                                 ) : '-'}
                                             </td>
                                             <td className="px-4 py-4 text-right font-semibold">
-                                                {formatCurrency(item.total_amount)}
+                                                {formatCurrency(item.total_amount, undefined, currencyCode)}
                                             </td>
                                         </tr>
                                     ))}
@@ -257,35 +269,35 @@ export default function View() {
                             <div className="w-80 space-y-3">
                                 <div className="flex justify-between text-sm">
                                     <span className="text-muted-foreground">{t('Subtotal')}</span>
-                                    <span className="font-medium">{formatCurrency(invoice.subtotal)}</span>
+                                    <span className="font-medium">{formatCurrency(invoice.subtotal, undefined, currencyCode)}</span>
                                 </div>
                                 {invoice.discount_amount > 0 && (
                                     <div className="flex justify-between text-sm">
                                         <span className="text-muted-foreground">{t('Discount')}</span>
-                                        <span className="font-medium text-red-600">-{formatCurrency(invoice.discount_amount)}</span>
+                                        <span className="font-medium text-red-600">-{formatCurrency(invoice.discount_amount, undefined, currencyCode)}</span>
                                     </div>
                                 )}
                                 {invoice.tax_amount > 0 && (
                                     <div className="flex justify-between text-sm">
                                         <span className="text-muted-foreground">{t('Tax')}</span>
-                                        <span className="font-medium">{formatCurrency(invoice.tax_amount)}</span>
+                                        <span className="font-medium">{formatCurrency(invoice.tax_amount, undefined, currencyCode)}</span>
                                     </div>
                                 )}
                                 <div className="border-t pt-3">
                                     <div className="flex justify-between">
                                         <span className="font-semibold">{t('Total Amount')}</span>
-                                        <span className="font-bold text-lg">{formatCurrency(invoice.total_amount)}</span>
+                                        <span className="font-bold text-lg">{formatCurrency(invoice.total_amount, undefined, currencyCode)}</span>
                                     </div>
                                 </div>
                                 {invoice.paid_amount > 0 && (
                                     <div className="flex justify-between text-sm">
                                         <span className="text-muted-foreground">{t('Paid Amount')}</span>
-                                        <span className="font-medium text-green-600">{formatCurrency(invoice.paid_amount)}</span>
+                                        <span className="font-medium text-green-600">{formatCurrency(invoice.paid_amount, undefined, currencyCode)}</span>
                                     </div>
                                 )}
                                 <div className="flex justify-between">
                                     <span className="font-semibold">{t('Balance Due')}</span>
-                                    <span className="font-bold text-lg">{formatCurrency(invoice.balance_amount)}</span>
+                                    <span className="font-bold text-lg">{formatCurrency(invoice.balance_amount, undefined, currencyCode)}</span>
                                 </div>
                             </div>
                         </div>

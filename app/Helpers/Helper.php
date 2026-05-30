@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use App\Classes\Module;
 use App\Events\DefaultData;
 use App\Events\GivePermissionToRole;
@@ -185,6 +186,20 @@ if (!function_exists('company_setting')) {
     }
 }
 
+if (!function_exists('invoice_default_currency')) {
+    function invoice_default_currency($user_id = null): string
+    {
+        return company_setting('defaultCurrency', $user_id) ?: 'USD';
+    }
+}
+
+if (!function_exists('valid_currency_codes')) {
+    function valid_currency_codes(): array
+    {
+        return array_column(config('default_currency.currencies', []), 'code');
+    }
+}
+
 if (!function_exists('getImageUrlPrefix')) {
     function getImageUrlPrefix(): string
     {
@@ -343,6 +358,76 @@ if (! function_exists('refreshPermissionCache')) {
             $user->unsetRelation('roles');
             $user->unsetRelation('permissions');
         }
+    }
+}
+
+if (! function_exists('fillQuickContactDefaults')) {
+    function fillQuickContactDefaults(array $data, string $type = 'customer'): array
+    {
+        $label = ucfirst($type);
+        $data['name'] = trim((string) ($data['name'] ?? '')) ?: "{$label} ".now()->format('Y-m-d H:i:s');
+        $email = trim((string) ($data['email'] ?? ''));
+        $data['email'] = $email !== '' ? $email : strtolower($type).'-'.Str::uuid().'@noemail.local';
+
+        return $data;
+    }
+}
+
+if (! function_exists('fillWarehouseDefaults')) {
+    function fillWarehouseDefaults(array $data): array
+    {
+        $suffix = now()->format('Y-m-d H:i:s');
+        $data['name'] = trim((string) ($data['name'] ?? '')) ?: "Warehouse {$suffix}";
+        $data['address'] = trim((string) ($data['address'] ?? '')) ?: '-';
+        $data['city'] = trim((string) ($data['city'] ?? '')) ?: '-';
+        $data['zip_code'] = trim((string) ($data['zip_code'] ?? '')) ?: '-';
+        $data['phone'] = trim((string) ($data['phone'] ?? '')) ?: null;
+        $data['email'] = trim((string) ($data['email'] ?? '')) ?: null;
+
+        return $data;
+    }
+}
+
+if (! function_exists('fillAccountPartyDefaults')) {
+    function fillAccountPartyDefaults(array $data, string $type = 'customer'): array
+    {
+        $label = ucfirst($type);
+        $suffix = now()->format('Y-m-d H:i:s');
+        $data['company_name'] = trim((string) ($data['company_name'] ?? '')) ?: "{$label} {$suffix}";
+        $data['contact_person_name'] = trim((string) ($data['contact_person_name'] ?? '')) ?: $data['company_name'];
+        $email = trim((string) ($data['contact_person_email'] ?? ''));
+        $data['contact_person_email'] = $email !== '' ? $email : strtolower($type).'-'.Str::uuid().'@noemail.local';
+
+        $billing = is_array($data['billing_address'] ?? null) ? $data['billing_address'] : [];
+        $data['billing_address'] = [
+            'name' => trim((string) ($billing['name'] ?? '')) ?: $data['company_name'],
+            'address_line_1' => trim((string) ($billing['address_line_1'] ?? '')) ?: '-',
+            'address_line_2' => trim((string) ($billing['address_line_2'] ?? '')),
+            'city' => trim((string) ($billing['city'] ?? '')) ?: '-',
+            'state' => trim((string) ($billing['state'] ?? '')) ?: '-',
+            'country' => trim((string) ($billing['country'] ?? '')) ?: '-',
+            'zip_code' => trim((string) ($billing['zip_code'] ?? '')) ?: '-',
+        ];
+
+        $sameAsBilling = $data['same_as_billing'] ?? true;
+        $data['same_as_billing'] = (bool) $sameAsBilling;
+
+        if ($data['same_as_billing']) {
+            $data['shipping_address'] = $data['billing_address'];
+        } else {
+            $shipping = is_array($data['shipping_address'] ?? null) ? $data['shipping_address'] : [];
+            $data['shipping_address'] = [
+                'name' => trim((string) ($shipping['name'] ?? '')) ?: $data['company_name'],
+                'address_line_1' => trim((string) ($shipping['address_line_1'] ?? '')) ?: '-',
+                'address_line_2' => trim((string) ($shipping['address_line_2'] ?? '')),
+                'city' => trim((string) ($shipping['city'] ?? '')) ?: '-',
+                'state' => trim((string) ($shipping['state'] ?? '')) ?: '-',
+                'country' => trim((string) ($shipping['country'] ?? '')) ?: '-',
+                'zip_code' => trim((string) ($shipping['zip_code'] ?? '')) ?: '-',
+            ];
+        }
+
+        return $data;
     }
 }
 

@@ -14,11 +14,11 @@ class StoreWarehouseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|string|max:255',
-            'address' => 'required|string',
-            'city' => 'required|string|max:255',
-            'zip_code' => 'required|string|max:20',
-            'phone' => 'nullable|string|regex:/^\+\d{1,3}\d{9,13}$/',
+            'name' => 'nullable|string|max:255',
+            'address' => 'nullable|string',
+            'city' => 'nullable|string|max:255',
+            'zip_code' => 'nullable|string|max:20',
+            'phone' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255',
             'is_active' => 'boolean',
         ];

@@ -54,6 +54,24 @@ class PurchaseInvoiceController extends Controller
         ];
     }
 
+    private function getVendorsWithCurrency()
+    {
+        return User::where('type', 'vendor')
+            ->select('id', 'name', 'email')
+            ->where('created_by', creatorId())
+            ->get()
+            ->map(function ($vendor) {
+                $details = \Workdo\Account\Models\Vendor::where('user_id', $vendor->id)->first();
+
+                return [
+                    'id' => $vendor->id,
+                    'name' => $vendor->name,
+                    'email' => $vendor->email,
+                    'currency_code' => $details?->currency_code,
+                ];
+            });
+    }
+
     public function index(Request $request)
     {
         if(Auth::user()->can('manage-purchase-invoices')){
@@ -129,7 +147,7 @@ class PurchaseInvoiceController extends Controller
     public function create()
     {
         if(Auth::user()->can('create-purchase-invoices')){
-            $vendors = User::where('type', 'vendor')->select('id', 'name', 'email')->where('created_by', creatorId())->get();
+            $vendors = $this->getVendorsWithCurrency();
             $products = ProductServiceItem::select('id', 'name', 'sku', 'purchase_price', 'tax_ids', 'unit', 'type')
             ->where('is_active', true)->where('created_by', creatorId())
             ->get()
@@ -157,6 +175,7 @@ class PurchaseInvoiceController extends Controller
                 'vendors' => $vendors,
                 'products' => $products,
                 'warehouses' => $warehouses,
+                'defaultCurrency' => invoice_default_currency(),
                 'quickAddUrls' => $this->quickAddUrls(),
                 'modules' => [
                     'recurringinvoicebill' => module_is_active('RecurringInvoiceBill')
@@ -180,6 +199,8 @@ class PurchaseInvoiceController extends Controller
             $invoice->warehouse_id = $request->warehouse_id;
             $invoice->payment_terms = $request->payment_terms;
             $invoice->notes = $request->notes;
+            $invoice->currency_code = $request->currency_code;
+            $invoice->exchange_rate = $request->exchange_rate;
             $invoice->subtotal = $totals['subtotal'];
             $invoice->tax_amount = $totals['tax_amount'];
             $invoice->discount_amount = $totals['discount_amount'];
@@ -239,7 +260,7 @@ class PurchaseInvoiceController extends Controller
 
             EditPurchaseInvoice::dispatch($purchaseInvoice);
 
-            $vendors = User::where('type', 'vendor')->select('id', 'name', 'email')->where('created_by', creatorId())->get();
+            $vendors = $this->getVendorsWithCurrency();
             $products = ProductServiceItem::select('id', 'name', 'sku', 'purchase_price', 'tax_ids', 'unit', 'type')
                 ->where('is_active', true)->where('created_by', creatorId())
                 ->get()
@@ -268,6 +289,7 @@ class PurchaseInvoiceController extends Controller
                 'vendors' => $vendors,
                 'products' => $products,
                 'warehouses' => $warehouses,
+                'defaultCurrency' => invoice_default_currency(),
                 'quickAddUrls' => $this->quickAddUrls(),
                 'modules' => [
                     'recurringinvoicebill' => module_is_active('RecurringInvoiceBill')
@@ -293,6 +315,8 @@ class PurchaseInvoiceController extends Controller
             $purchaseInvoice->warehouse_id = $request->warehouse_id;
             $purchaseInvoice->payment_terms = $request->payment_terms;
             $purchaseInvoice->notes = $request->notes;
+            $purchaseInvoice->currency_code = $request->currency_code;
+            $purchaseInvoice->exchange_rate = $request->exchange_rate;
             $purchaseInvoice->subtotal = $totals['subtotal'];
             $purchaseInvoice->tax_amount = $totals['tax_amount'];
             $purchaseInvoice->discount_amount = $totals['discount_amount'];
@@ -416,7 +440,8 @@ class PurchaseInvoiceController extends Controller
             return response()->json(['message' => $checkUser['message']], 422);
         }
 
-        $validated = $request->validated();
+        $validated = fillQuickContactDefaults($request->validated(), 'vendor');
+
         $creatorId = creatorId();
         $role = Role::where('name', 'vendor')->where('created_by', $creatorId)->first();
 
@@ -501,7 +526,7 @@ class PurchaseInvoiceController extends Controller
             return response()->json(['message' => __('Permission denied')], 403);
         }
 
-        $validated = $request->validated();
+        $validated = fillWarehouseDefaults($request->validated());
         $validated['is_active'] = $request->boolean('is_active', true);
 
         $warehouse = new Warehouse();
@@ -509,8 +534,8 @@ class PurchaseInvoiceController extends Controller
         $warehouse->address = $validated['address'];
         $warehouse->city = $validated['city'];
         $warehouse->zip_code = $validated['zip_code'];
-        $warehouse->phone = $validated['phone'] ?? null;
-        $warehouse->email = $validated['email'] ?? null;
+        $warehouse->phone = $validated['phone'];
+        $warehouse->email = $validated['email'];
         $warehouse->is_active = $validated['is_active'];
         $warehouse->creator_id = Auth::id();
         $warehouse->created_by = creatorId();

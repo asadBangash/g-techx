@@ -45,7 +45,7 @@ class WarehouseController extends Controller
     public function store(StoreWarehouseRequest $request)
     {
         if(Auth::user()->can('create-warehouses')){
-            $validated = $request->validated();
+            $validated = fillWarehouseDefaults($request->validated());
             $validated['is_active'] = $request->boolean('is_active', true);
 
             $warehouse = new Warehouse();
