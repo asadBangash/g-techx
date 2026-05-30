@@ -440,9 +440,8 @@ if (! function_exists('ensureCompanySubscriptionReady')) {
      *   - sync user_active_modules to match plan.modules
      *   - refresh permission cache
      *
-     * Heavy operations (only when explicitly requested via the repair command):
-     *   - seedPackagePermissions      → thousands of inserts; run once at deploy
-     *   - dispatchPlanModuleSetup     → per-module default data; can take minutes
+     * Heavy operations (only when explicitly requested):
+     *   - dispatchPlanModuleSetup(..., withDefaultData: true) → per-module default data
      */
     function ensureCompanySubscriptionReady(User $user, bool $withDefaultData = false): void
     {
@@ -477,11 +476,12 @@ if (! function_exists('ensureCompanySubscriptionReady')) {
             applyPlanModulesToUser($company, $planModules, false);
         }
 
-        // Permission seeding is a one-time deployment task; do NOT run synchronously here
-        // because it inserts thousands of rows and stalls registration/login on shared hosting.
-        // Run `php artisan app:repair-company-access` once after deploy.
+        if (companyRoleMissingPlanPermissions($planModules)) {
+            seedPackagePermissions($planModules);
+        }
+
         if ($withDefaultData) {
-            dispatchPlanModuleSetup($company, $planModules, false);
+            dispatchPlanModuleSetup($company, $planModules, false, true);
         }
 
         refreshPermissionCache($user);
@@ -558,33 +558,52 @@ if (!function_exists('Module_is_active')) {
     }
 }
 
-// Dispatch module setup events (default data + role permissions).
-if (! function_exists('dispatchPlanModuleSetup')) {
-    function dispatchPlanModuleSetup(User $user, array $modules_array, bool $seedPermissions = true): void
+// Grant plan module permissions to company/staff/client/vendor roles (no default data).
+if (! function_exists('grantPlanModulePermissionsToRoles')) {
+    function grantPlanModulePermissionsToRoles(User $company, array $modules_array): void
     {
         if (empty($modules_array)) {
             return;
         }
 
-        if ($seedPermissions) {
+        $modules_string = implode(',', $modules_array);
+
+        $company_role = Role::where('name', 'company')->where('guard_name', 'web')->first();
+        $client_role = Role::where('name', 'client')->where('created_by', $company->id)->first();
+        $staff_role = Role::where('name', 'staff')->where('created_by', $company->id)->first();
+        $vendor_role = Role::where('name', 'vendor')->where('created_by', $company->id)->first();
+
+        if ($company_role) {
+            GivePermissionToRole::dispatch($company_role->id, 'company', $modules_string);
+        }
+        if ($client_role) {
+            GivePermissionToRole::dispatch($client_role->id, 'client', $modules_string);
+        }
+        if ($staff_role) {
+            GivePermissionToRole::dispatch($staff_role->id, 'staff', $modules_string);
+        }
+        if ($vendor_role) {
+            GivePermissionToRole::dispatch($vendor_role->id, 'vendor', $modules_string);
+        }
+    }
+}
+
+// Dispatch module setup events (default data + role permissions).
+if (! function_exists('dispatchPlanModuleSetup')) {
+    function dispatchPlanModuleSetup(User $user, array $modules_array, bool $seedPermissions = true, bool $withDefaultData = true): void
+    {
+        if (empty($modules_array)) {
+            return;
+        }
+
+        if ($seedPermissions && companyRoleMissingPlanPermissions($modules_array)) {
             seedPackagePermissions($modules_array);
         }
 
-        $modules_string = implode(',', $modules_array);
-        DefaultData::dispatch($user->id, $modules_string);
+        grantPlanModulePermissionsToRoles($user, $modules_array);
 
-        $company_role = Role::where('name', 'company')->where('guard_name', 'web')->first();
-        $client_role = Role::where('name', 'client')->where('created_by', $user->id)->first();
-        $staff_role = Role::where('name', 'staff')->where('created_by', $user->id)->first();
-
-        if (! empty($company_role)) {
-            GivePermissionToRole::dispatch($company_role->id, 'company', $modules_string);
-        }
-        if (! empty($client_role)) {
-            GivePermissionToRole::dispatch($client_role->id, 'client', $modules_string);
-        }
-        if (! empty($staff_role)) {
-            GivePermissionToRole::dispatch($staff_role->id, 'staff', $modules_string);
+        if ($withDefaultData) {
+            DefaultData::dispatch($user->id, implode(',', $modules_array));
         }
     }
 }

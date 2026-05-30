@@ -44,6 +44,11 @@ class RepairCompanyAccessCommand extends Command
 
         foreach ($companies as $company) {
             ensureCompanySubscriptionReady($company, true);
+            $plan = $company->active_plan ? \App\Models\Plan::find($company->active_plan) : null;
+            $planModules = is_array($plan?->modules) ? $plan->modules : [];
+            if (! empty($planModules)) {
+                grantPlanModulePermissionsToRoles($company, $planModules);
+            }
             $moduleCount = \App\Models\UserActiveModule::where('user_id', $company->id)->count();
             $permCount = $company->getAllPermissions()->count();
             $this->info("Repaired: {$company->email} — {$moduleCount} modules, {$permCount} permissions");
