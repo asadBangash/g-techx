@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -48,10 +49,16 @@ class AuthenticatedSessionController extends Controller
 
         if (Auth::user()?->type === 'company') {
             ensureCompanySubscriptionReady(Auth::user(), false);
+
+            $plan = Auth::user()->active_plan ? \App\Models\Plan::find(Auth::user()->active_plan) : null;
+            $planModules = is_array($plan?->modules) ? $plan->modules : [];
+            if (! empty($planModules) && companyRoleMissingPlanPermissions($planModules)) {
+                provisionCompanyPermissionsDeferred(Auth::user(), $planModules);
+            }
         }
 
-        // Log login history
-        $this->logLoginHistory($request);
+        // Log login history after response so external IP lookup does not delay login.
+        Bus::dispatchAfterResponse(fn () => $this->logLoginHistory($request));
 
         if (Auth::check() && Auth::user()->hasRole('superadmin')) {
             try {
@@ -112,7 +119,7 @@ class AuthenticatedSessionController extends Controller
     private function getLocationData(string $ip): array
     {
         try {
-            $response = Http::timeout(5)->get("http://ip-api.com/json/{$ip}");
+            $response = Http::timeout(2)->get("http://ip-api.com/json/{$ip}");
             if ($response->successful()) {
                 $data = $response->json();
                 return [

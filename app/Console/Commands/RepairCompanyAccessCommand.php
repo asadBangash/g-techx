@@ -47,7 +47,7 @@ class RepairCompanyAccessCommand extends Command
             $plan = $company->active_plan ? \App\Models\Plan::find($company->active_plan) : null;
             $planModules = is_array($plan?->modules) ? $plan->modules : [];
             if (! empty($planModules)) {
-                grantPlanModulePermissionsToRoles($company, $planModules);
+                provisionCompanyPermissions($company, $planModules);
             }
             $moduleCount = \App\Models\UserActiveModule::where('user_id', $company->id)->count();
             $permCount = $company->getAllPermissions()->count();

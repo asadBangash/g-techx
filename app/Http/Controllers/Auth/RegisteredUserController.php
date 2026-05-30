@@ -78,11 +78,9 @@ class RegisteredUserController extends Controller
                 $user->storage_limit = $freePlan->storage_limit;
                 $user->save();
 
-                // Assign plan modules + permissions (same as localhost). Default module
-                // data is skipped here to keep registration fast on shared hosting.
                 ensureCompanySubscriptionReady($user, false);
                 if (! empty($planModules)) {
-                    grantPlanModulePermissionsToRoles($user, $planModules);
+                    provisionCompanyPermissionsDeferred($user, $planModules);
                 }
             }
 

@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use App\Classes\Module;
@@ -476,15 +477,49 @@ if (! function_exists('ensureCompanySubscriptionReady')) {
             applyPlanModulesToUser($company, $planModules, false);
         }
 
-        if (companyRoleMissingPlanPermissions($planModules)) {
-            seedPackagePermissions($planModules);
-        }
-
         if ($withDefaultData) {
             dispatchPlanModuleSetup($company, $planModules, false, true);
         }
 
         refreshPermissionCache($user);
+    }
+}
+
+// Seed permissions + assign module access to company roles (can take minutes synchronously).
+if (! function_exists('provisionCompanyPermissions')) {
+    function provisionCompanyPermissions(User $company, array $planModules): void
+    {
+        $planModules = array_values(array_filter(array_map('trim', $planModules)));
+        if (empty($planModules)) {
+            return;
+        }
+
+        if (companyRoleMissingPlanPermissions($planModules)) {
+            seedPackagePermissions($planModules);
+        }
+
+        grantPlanModulePermissionsToRoles($company, $planModules);
+        refreshPermissionCache($company);
+    }
+}
+
+// Run permission provisioning after the HTTP response so register/login stay fast.
+if (! function_exists('provisionCompanyPermissionsDeferred')) {
+    function provisionCompanyPermissionsDeferred(User $company, array $planModules): void
+    {
+        $planModules = array_values(array_filter(array_map('trim', $planModules)));
+        if (empty($planModules)) {
+            return;
+        }
+
+        $userId = $company->id;
+
+        Bus::dispatchAfterResponse(function () use ($userId, $planModules) {
+            $company = User::find($userId);
+            if ($company) {
+                provisionCompanyPermissions($company, $planModules);
+            }
+        });
     }
 }
 
@@ -573,9 +608,7 @@ if (! function_exists('grantPlanModulePermissionsToRoles')) {
         $staff_role = Role::where('name', 'staff')->where('created_by', $company->id)->first();
         $vendor_role = Role::where('name', 'vendor')->where('created_by', $company->id)->first();
 
-        if ($company_role) {
-            GivePermissionToRole::dispatch($company_role->id, 'company', $modules_string);
-        }
+        // Global company role permissions are assigned by package PermissionTableSeeders.
         if ($client_role) {
             GivePermissionToRole::dispatch($client_role->id, 'client', $modules_string);
         }
